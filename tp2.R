@@ -1,7 +1,8 @@
+library(igraph)
 
 
-erdos <- function(n,p)
-{
+erdos <- function(n,p)  ## Erdös-Rényi model necessarily has a Poisson degree ????? Parler des Components ! 
+{ 
   
   combi <- n*(n-1)/2
   theoM <- p*combi
@@ -35,7 +36,8 @@ Watts_Strogatz <- function(n,p,m)
 {
   #igraph <- make_ring(n, directed = FALSE)
   igraph  <- make_empty_graph(directed = FALSE)
-  igraph <- add_vertices(igraph,n, color = "red")
+  test_color <- "#92278f"
+  igraph <- add_vertices(igraph,n, color = test_color)
   
   for(i in 1 : n)
   {
@@ -61,9 +63,9 @@ Watts_Strogatz <- function(n,p,m)
   
 }
 
-n <- 6
+n <- 30
 m <- 2
-p <- 0.1
+p <- 0.
 
 Watts_Strogatz(n,p,m)
 
