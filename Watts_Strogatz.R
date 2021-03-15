@@ -1,17 +1,9 @@
 #install.packages("igraph")
 library(igraph)
 
-
 Watts_Strogatz <- function(n,p,m)
 {
   igraph <- make_ring(n, directed = FALSE)
-  # igraph  <- make_empty_graph(directed = FALSE)
-  # igraph <- add_vertices(igraph,n, color = "red")
-
-
-
-
-
   for(i in 1 : n)
   {
     #cat("i=",i,"\n")
@@ -150,9 +142,9 @@ Watts_Strogatz <- function(n,p,m)
   
 }
 
-n <- 20
+n <- 190
 m <- 2
-p <- 0.1
+p <- 0.2
 
 Watts_Strogatz(n,p,m)
 

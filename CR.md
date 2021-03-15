@@ -40,7 +40,6 @@ fromMatriceToList <- function(mat)
   }
   lst
 }
-
 ```
 And now the opposite  a function that gets the adjacency matrix form the adjacency list : 
 ```r
@@ -374,11 +373,11 @@ Unfortunately I did not maneged to make this function work. The following progra
 
 ### 4. With the package Igraph
 
-First you need to download the igraph libray via the R packet mananger: 
+First you need to download the igraph libray via the R packet manager: 
 ```r 
 install.packages("igraph")
 ```
-Then add load the package at the beging of the script
+Then load the package at the beging of the script
 ```r
 library(igraph)
 ```
@@ -496,4 +495,3351 @@ findcolor <- function(input_val,low_val, high_val,inputcolor )
   step.B <- floor(inputcolor.B * (input_val-low_val) / range)
   step <- c(step.R/256,step.G/256,step.B/256)
 }
+```
+
+The we just have to mofify the vertex attribute. 
+
+```r
+colorgraph <- function(igraph,inputcolor,inputtype)
+{
+  if(inputtype == "degree" )
+  {
+    degreevect <- igraphdegrees(igraph)
+    for(i in 1:length(degreevect))
+    {
+      vcolor <- findcolor( degree(igraph)[i] , min(degree(igraph)), max(degree(igraph)) , inputcolor )
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(vcolor[1],vcolor[2],vcolor[3]))
+    }
+  }else if( inputtype == "closeness" )
+  {
+    closnessvect <- closeness(igraph,normalized = FALSE)
+    for(i in 1 : length(closnessvect) )
+    {
+      vcolor <- findcolor( closnessvect[i] , min(closnessvect), max(closnessvect) , inputcolor )
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(vcolor[1],vcolor[2],vcolor[3]))
+    }
+  }else if( inputtype == "clustering" )
+  {
+    local_cluster <- transitivity(igraph, type = "local")
+    for(i in 1 : length(local_cluster) )
+    {
+      if( is.nan(local_cluster[i]) == FALSE )
+      {
+        # /!\ Points were local clustering can't be etablish are not colored here
+        vcolor <- findcolor( local_cluster[i] , min(local_cluster, na.rm = TRUE), max(local_cluster, na.rm = TRUE) , inputcolor )
+        igraph <- set.vertex.attribute(igraph, 'color', i, rgb(vcolor[1],vcolor[2],vcolor[3]))
+      }
+    }
+  }else if( inputtype == "betweenness" )
+  {
+    betw <- betweenness(igraph,normalized = FALSE)
+    for(i in 1 : length(betw) )
+    {
+      if( is.nan(betw[i]) == FALSE )
+      {
+        vcolor <- findcolor( betw[i] , min(betw, na.rm = TRUE), max(betw, na.rm = TRUE) , inputcolor )
+        igraph <- set.vertex.attribute(igraph, 'color', i, rgb(vcolor[1],vcolor[2],vcolor[3]))
+      }
+    }
+  }
+  igraph
+}
+```
+
+**Size**
+
+The process to modify the node size is almost the same as for color. We have replace the input color by a size coeficient to change the scale of ploting.
+
+```r
+findsize <- function(input_val,low_val, high_val, sizeCoef )
+{
+  range <- high_val - low_val;
+  step  <-  ((input_val-low_val) / range)*sizeCoef
+}
+```
+
+```r
+sizegraph <- function(igraph,inputtype,sizeCoef)
+{
+  if(inputtype == "degree" )
+  {
+    degreevect <- igraphdegrees(igraph)
+    for(i in 1:length(degreevect))
+    {
+      wsize <- findsize( degree(igraph)[i] , min(degree(igraph)), max(degree(igraph)) , sizeCoef )
+      igraph <- set.vertex.attribute(igraph, 'size', i, wsize)
+    }
+  }else if( inputtype == "closeness" )
+  {
+    closnessvect <- closeness(igraph,normalized = FALSE)
+    for(i in 1 : length(closnessvect) )
+    {
+      wsize <- findsize( closnessvect[i] , min(closnessvect), max(closnessvect) , sizeCoef )
+      igraph <- set.vertex.attribute(igraph, 'size', i, wsize)
+    }
+  }else if( inputtype == "clustering" )
+  {
+    local_cluster <- transitivity(igraph, type = "local")
+    for(i in 1 : length(local_cluster) )
+    {
+      if( is.nan(local_cluster[i]) == FALSE )
+      {
+        
+        wsize <- findsize( local_cluster[i] , min(local_cluster, na.rm = TRUE), max(local_cluster, na.rm = TRUE) , sizeCoef )
+        igraph <- set.vertex.attribute(igraph, 'size', i, wsize)
+      }else
+      {
+        # /!\ Points were local clustering can't be etablish we set default size to 1
+        igraph <- set.vertex.attribute(igraph, 'size', i, 1)
+      }
+    }
+  }else if( inputtype == "betweenness" )
+  {
+    betw <- betweenness(igraph,normalized = FALSE)
+    for(i in 1 : length(betw) )
+    {
+      if( is.nan(betw[i]) == FALSE )
+      {
+        wsize <- findsize( betw[i] , min(betw, na.rm = TRUE), max(betw, na.rm = TRUE) , sizeCoef )
+        igraph <- set.vertex.attribute(igraph, 'size', i, wsize)
+      }
+    }
+  }
+  igraph
+}
+```
+
+Those function can be perforemed more efficiantly.
+
+## TP2
+
+### 1) Introduction
+
+TP2 is focused on creation of undirected random graph model. Once the model builded, we uses metrics to extract some of there caracteristiques.
+
+### 2) Erdos-Renyi model
+
+The Graph Erdos-Renyi G(n, p) = (V,E) constructed from a set V of n vertices.
+The edge between 2 vertices i and j exists with probability p.
+
+Below is a propostion of algorthiym :
+
+```r
+Erdos_Renyi <- function(n,p)
+{ 
+  igraph  <- make_empty_graph(directed = FALSE)
+  igraph <- add_vertices(igraph,n, color = "red")
+  for(i in 1 : n)
+  {
+    for(j in i : n)
+    {
+      if( runif(1) < p )
+      {
+        igraph <- add_edges(igraph, c(i,j))
+      }
+    }
+  }
+  igraph
+}
+```
+
+This implementation give the right output. Hoever due to the 2 for loop performance is quite bad and it can take sevral minutes with large graph. 
+
+A faster implementation is porposed below with approch closer to adjency matrix.
+Note the transpose trick used to make the matrix symetric.
+
+```r
+Erdos_Renyi_optimized <- function(n,p)
+{
+  nb_tri <- n*(n-1)/2
+  mat <- diag(0,nrow = n, ncol = n)
+  vect_rand <- runif(nb_tri , min = 0, max = 1) - p
+  for(i in 1:nb_tri)
+  {
+    if(vect_rand[i]>0)
+    {
+      vect_rand[i] <- 0 
+    }
+    else
+    {
+      vect_rand[i] <- 1 
+    }
+  }
+  mat[lower.tri(mat)] <- vect_rand
+  mat <- t(mat)
+  mat[lower.tri(mat)] <- vect_rand
+  igraph <- graph_from_adjacency_matrix(mat,mode = c("undirected"))
+  igraph
+}
+```
+
+Dire quelques mots sur la distribution de type poisons
+
+### 3) Watts-Strogatz model : Small world network
+
+The Watts–Strogatz model produces graphs with small-world properties.
+
+During the implementation of this algotium the first version created completed the task enficiently but was very slow ( multiple minutes for n=1000 ) due to the cascade of for loops.
+After rewriting the r code here is implementation that perform well and can produce the required the task quasi instantly.
+
+```r
+Watts_Strogatz_opt <- function(n,p,m)
+{
+  igraph <- make_ring(n, directed = FALSE)
+  ## End step1
+  for(j in 1:m)
+  {
+    for( i in 1: n)
+    {
+      igraph <- add_edges(igraph, c(i,((i+j)%%n+1)  ))
+    }
+  }
+  ## End step2
+  nb_tri <- n*(n-1)/2
+  vect_rand <- runif(nb_tri , min = 0, max = 1) - p
+  for(i in 1:nb_tri)
+  {
+    if(vect_rand[i]>0)
+    {
+      vect_rand[i] <- 1 
+    }
+    else
+    {
+      vect_rand[i] <- 0 
+    }
+  }
+  sp <- matrix( nrow = n, ncol = n)
+  sp[lower.tri(sp)] <- vect_rand
+  sp <- t(sp)
+  sp[lower.tri(sp)] <- vect_rand
+  diag(sp) <- 0
+  
+  adj_mat <-  as_adjacency_matrix(igraph,type = c("both"))
+  res_mat <- adj_mat*sp
+  igraph <- graph_from_adjacency_matrix(res_mat,mode = c("undirected"))
+ 
+  ## End Step 3 (remouving edges)
+  
+  act_size <- gsize(igraph)
+  aim_size <- n*(2+2*m)/2
+  nb_edges_to_add <- aim_size - act_size
+  for( i in 1: nb_edges_to_add)
+  {
+    edge_added <- FALSE
+    while(edge_added == FALSE)
+    {
+      proposal <- floor(runif(2,min = 1, max = n))
+      if( (are_adjacent(igraph, proposal[1], proposal[2] ) == FALSE ) && ( proposal[1] != proposal[2] ) )
+      {
+        igraph <- add_edges(igraph, c( proposal[1], proposal[2] )  )
+        edge_added <- TRUE
+      }
+    }
+  }
+  igraph
+}
+```
+
+### 4) Graph scale free
+
+The following code genrate a scale free graph for any type of k.
+
+```r
+nb_init_nodes <- function(nb_init_edges)
+{
+  n_cal <- (1+sqrt(1+8*nb_init_edges))/2
+  if( n_cal == floor(n_cal) )
+  {
+    return(n_cal)
+  }else{
+    n_cal <- floor(n_cal)+1
+  }
+  n_cal
+}
+
+scale_free_init <- function(k)
+{
+  nb_node <- nb_init_nodes(k)
+  nb_tri <- nb_node*(nb_node-1)/2
+  mat <- matrix( nrow = nb_node, ncol = nb_node)
+  diag(mat) <- 0
+  vect_init <- c( rep(1, k) , rep(0, (nb_tri-k) ))
+  mat[lower.tri(mat)] <- vect_init
+  mat <- t(mat)
+  mat[lower.tri(mat)] <- vect_init  
+  igraph <- graph_from_adjacency_matrix(mat,mode = c("undirected"))
+  igraph
+}
+
+scale_free_degree_range <- function(igraph,random)
+{
+  random <- runif(1)
+  vect_deg <- degree(igraph)
+  nbedges <- sum(vect_deg)/2
+  sum <- 0
+    for(i in 1:length(vect_deg))
+    {
+        sum <- sum + vect_deg[i]/(nbedges*2)
+        if( sum > random)
+        {
+          return(i)
+        }
+    }
+}
+
+scale_free <- function(n,k,q)
+{
+  igraph <- scale_free_init(k)
+  add <- 0
+  nodenb <- k
+  while( nodenb < n)
+  {
+    igraph <- add_vertices(igraph,1)
+    for(i in 1:q)
+    {
+      igraph <- add_edges(igraph,c( (nodenb-1+q) ,scale_free_degree_range(igraph)))
+    }
+    nodenb <- nodenb + 1
+  }
+  igraph
+}
+```
+### 5) Histograms of the degree distribution.
+
+First we will generate diffrents grap with the previous functions: 
+
+- Erdos-Renyi with 1000 nodes and diferent values of the probability p from 0 to 1 with a step of 0.05.
+
+To do this we use the folling code: 
+
+```r
+generate_ER <- function(n)
+{
+  p <- 0
+  lst = list()
+  for(i in 1:21)
+  {
+    lst[[i]] <- degree(Erdos_Renyi_optimized(n,p))
+    p <- p + 0.05
+  }
+  
+  find_xmax_histo <- function(lst_deg)
+  {
+    max_histo <- 0
+    for( i in 2: length(lst_deg)-1)
+    {
+      if( max(lst_deg[[i]]) > max_histo )
+      {
+        max_x_histo <- max(lst_deg[[i]])
+      }
+    }
+    max_x_histo
+  }
+  
+  draw_histos <- function(lst_deg,x_max)
+  {
+    cat("Max histo = ",x_max)
+    max_y_histo <- 0
+    #for( i in 1: )
+    for( i in 2: length(lst_deg)-1)
+    {
+      strmain <- c('Histogram of Erdos_Renyi for p=',(i-1)*0.05)
+      vect_hist <- hist(lst_deg[[i]],
+                        main=strmain,
+                        xlim=c(0,x_max),
+                        breaks=(x_max+2))
+      if(max(vect_hist$counts) > max_y_histo )
+      {
+        max_y_histo <- max(vect_hist$counts)
+      }
+    }
+    max_y_histo
+  }
+  xmax <- find_xmax_histo(lst)
+  draw_histo(lst,xmax)
+}
+```
+We notice the Poisson distribution with the diffent probability.
+
+- Watts-Strogatz of size n = 1000 with p = 0.1 and m = 2.
+```r
+Watts_histo <- function(igraph)
+{
+  vect_deg <- degree(igraph)
+  hsacle <- max(vect_deg) 
+  hist(degree(ig),
+       main="Watts Strogatz Histogram \n ( n = 1000 , k = 2 , p = 0.1 ) ",
+       xlim=c(2,hsacle),
+       breaks=(hsacle+2),
+       col= rgb(146/256,39/256,143/256)
+  )
+}
+```
+
+[ PUT ONE IMG]
+
+- A scale free of size n = 1000 with k = 3 and q = 2.
+
+For this scale free we have added a power law in comparaison to verify this law.
+
+```r
+customhisto <- function(igraph)
+{
+  vect_deg <- degree(igraph)
+  tot <- sum(vect_deg, na.rm = FALSE)
+  hsacle <- max(vect_deg) 
+  pow <- powerlaw(100,hsacle)
+  hist(degree(ig),
+       xlim=c(2,hsacle),
+       breaks=(hsacle+2),
+       col= rgb(146/256,39/256,143/256)
+       )
+  lines(pow[2,]*tot,lwd = 2,
+  col = "green")
+}
+```
+
+Here is the code used to create the power law :
+
+```r
+powerlaw <- function(hsacle,nbpt)
+{
+  a <- 2.5
+  C <- 1
+  step <- hsacle/nbpt
+  
+  mat <- vector(mode = "numeric",(2*nbpt))
+  dim(mat) <- c(2,nbpt)
+  
+  for(i in 1:nbpt)
+  {
+    mat[1,i] <- i*step
+    mat[2,i] <- C*i^(-a)
+  }
+  mat
+}
+```
+[ PUT ONE IMG]
+
+### 6) Scale free, power law degree distribution
+
+To show more the distribution of degree in scale free graph follow power law of type  P(k) ~k^-a.
+
+We used a cumulative distribution visualisation with the fllowing code 
+
+[PUT FORMULA if we have time]
+
+```r
+sortdeg <- function(igraph)
+{
+  vect_deg <- degree(igraph)
+  sorted <- sort.int(vect_deg,decreasing = TRUE)
+  sortedind <- sort.int(vect_deg,decreasing = TRUE, index.return = TRUE)
+
+  scale_max <- max(sortedind$x)
+  mat <- vector(mode = "numeric",(2*scale_max))
+  dim(mat) <- c(2,scale_max)
+  for(i in 1: length(sortedind$x))
+  {
+    mat[2,sortedind$x[i]] <- mat[2,sortedind$x[i]]+1
+  }
+  for( i in length(mat[2,]):2 )
+  {
+    mat[2,i-1] <- mat[2,i-1] + mat[2,i] 
+  }
+  normal <- mat[2,1]
+  for( i in 1 : length(mat[2,]))
+  {
+    mat[1,i] <- i
+    mat[2,i] <- mat[2,i]/normal
+  }
+  max_x <- max(sortedind$x)
+  print(max_x)
+  plot(mat[1,],mat[2,],
+       xlab = "Degree k",
+       ylab = "Fraction of nodes Pk having degree k or greater",
+       xlim = c(1,max_x),
+       ylim = c(0.001,1),
+       log ="xy"
+       )
+  # We may have pb with k = 2.. 
+}
+```
+[PUT ONE IMG]
+
+### 7) Erdos-Renyi , average length as function of p
+
+To calculate the avreage lenght with the following formula.
+
+[ PUT FORMULA ]
+
+We use the follwing code : 
+
+```r
+average_length <- function(igraph)
+{
+  print(vcount(igraph))
+  sum <- 0
+  for( i in 1: vcount(igraph) )
+  {
+    bfs_i <- bfs(igraph,i,
+        unreachable = FALSE,
+        dist = TRUE);
+    for(j in i : vcount(igraph) )
+    {
+      if( i != j)
+      {
+        #cat("i:",i,"\t","j:",j,"\tdist:",bfs_i$dist[j],"\n");
+        #bfs_i$dist[j] 
+        if( !is.nan( bfs_i$dist[j] ) )
+        {
+          sum <- sum + bfs_i$dist[j]
+        }
+      }
+    }
+  }
+  l <- 2*sum/( (vcount(igraph)*( vcount(igraph) -1 ))  )
+}
+```
+The evolution of the average length with p is ploted with the folling code : 
+
+```r
+p_average_length <- function(nb_nodes,nb_sample)
+{
+  p <- 0
+  step <- 1/nb_sample
+  mat <- vector(mode = "numeric",(2*(nb_sample+1)))
+  dim(mat) <- c(2,nb_sample+1)
+  for(i in 1: (nb_sample + 1))
+  {
+    mat[1,i] <- p
+    ig <- Erdos_Renyi_optimized(nb_nodes,p)
+    mat[2,i] <- average_length(ig)
+    p <- p + step
+    cat("Progress: ",(i/(nb_sample+1))*100,"%\n")
+  }
+  strmain <- c("Evolution of average length with p for Erdos-Renyi n=",nb_nodes)
+  plot(x = mat[1,],
+       y = mat[2,],
+       main = strmain,
+       type = "b",
+       xlab = "p",
+       ylab = "Average length",
+       )
+}
+```
+
+[PUT ONE IMG]
+
+### 8) Erdos-Renyi, clustering coefficient as functions of p
+
+The same pinciple is applyed for evolution of the global clustering coefficient. 
+
+```r
+p_clustering_coef <- function(nb_nodes,nb_sample)
+{
+  p <- 0
+  step <- 1/nb_sample
+  mat <- vector(mode = "numeric",(2*(nb_sample+1)))
+  dim(mat) <- c(2,nb_sample+1)
+  for(i in 1: (nb_sample + 1))
+  {
+    mat[1,i] <- p
+    ig <- Erdos_Renyi_optimized(nb_nodes,p)
+    mat[2,i] <- transitivity(ig)
+    p <- p + step
+    cat("Progress: ",(i/(nb_sample+1))*100,"%\n")
+  }
+  strmain <- c("Evolution of the global clustering coefficient with p for Erdos-Renyi n=",nb_nodes)
+  plot(x = mat[1,],
+       y = mat[2,],
+       main = strmain,
+       type = "b",
+       xlab = "p",
+       ylab = "Global clustering coefficient",
+  )
+}
+```
+
+[PUT ONE IMG]
+
+## TP3
+
+### 1) Introduction
+
+In this TP, we will study a voter model. The social interaction will be modelized with an undirected graph. After the creation of a dynamic modilisation, we focus on diffrents scenarios that would allow you to influence the opinion. 
+
+
+### 2) Voter model
+
+The model described in TP3 is a simple agent-based on an undirected graph. Each node has only one attribute that represente his vote.
+
+First we initialise the network with a Bernoulli's law of parameter 0.5 :
+
+```r
+initVoteBernoulli <- function(igraph)
+{
+  for( i in 1: vcount(igraph))
+  {
+    if( runif(1) < 1/2 )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=1)
+    }
+    else
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=0)
+    }
+  }
+  igraph
+}
+```
+
+Then each node is influence by his neigbors.
+Here is fast implementation that work close to adjency matrix : 
+
+```r
+
+Nb_neighbors_vect <- function(igraph)
+{
+  mat <- as_adjacency_matrix(igraph)
+  len <- nrow(mat)
+  N_vect <- vector(mode = "numeric",len)
+  for(i in 1 : len )
+  {
+    res <- sum(mat[i,])
+    if(res > 0)
+    {
+      N_vect[i] <- sum(mat[i,])
+    }else if(res == 0)
+    {
+      N_vect[i] <- 1
+    }
+    else{
+      print("BUG - Nb_neighbors_vect")
+    }
+  }
+  N_vect
+}
+
+probability_vect <- function(igraph,N_vect)
+{
+  adj_mat <-  as_adjacency_matrix(igraph, sparse = FALSE)
+  vect_vote <- get.vertex.attribute(igraph, "vote")
+  prob_vect <- adj_mat%*%vect_vote
+  out <- prob_vect/N_vect
+  out
+}
+
+getOneVote <- function(igraph)
+{
+  vc <- vcount(igraph)
+  vect <- vector(mode = "numeric",vc)
+  for( i in 1 : vc)
+  {
+    vect[i] <- get.vertex.attribute(igraph, "vote",i) 
+  }
+  vect
+}
+
+vote_probability <- function(igraph,noise,N_vect)
+{
+  p_v <- probability_vect(igraph,N_vect)
+  len <- length(p_v)
+  f_p_opti <- vector(mode = "numeric",len)
+  f_p_opti <- (1-2*noise)*p_v + noise
+  f_p_opti
+}
+
+vote <- function(igraph,noise,N_vect)
+{
+  
+  f_p <- vote_probability(igraph,noise,N_vect)
+  vc <- vcount(igraph)
+  for( i in 1: vc)
+  {
+    if( runif(1) < f_p[i] )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=0)
+    }
+    else
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=1)
+    }
+  }
+  igraph
+}
+declare_winner <- function(mat)
+{
+  end_vote_vect <- mat[,ncol(mat)]
+  
+  if( sum(end_vote_vect)/nrow(mat) == 0.5  )
+  {
+    cat("Deuce\n")
+  }else if( sum(end_vote_vect)/nrow(mat) < 0.5 )
+  {
+    cat("Jerry win\n")
+  }else if( sum(end_vote_vect)/nrow(mat) > 0.5 )
+  {
+    cat("Tom win\n")
+  }
+}
+
+simulation <- function(igraph,noise,time)
+{
+  N_vect <- Nb_neighbors_vect(ig)
+ 
+  igraph <- initVoteBernoulli(igraph)
+  mat <- vector(mode = "numeric",(vcount(igraph)*time))
+  dim(mat) <- c(vcount(igraph),time)
+  for(i in 1: time)
+  {
+    mat[,i] <- getOneVote(igraph)
+    igraph <- vote(igraph,noise,N_vect)
+    cat(i," over ",time,"\n")
+  }
+  declare_winner(mat)
+  mat
+}
+```
+Then you just have to give the network of you choice to the simulation and you will have complete matrix that repesente the evolution of votes.
+
+Before the developpement of this implementation of a dynamic model I have build an other model witch is way less time-efficient.
+Here is the code:
+```r
+probability_node <- function(igraph, node)
+{
+  adj_lst_node <- as_adj_list(igraph)[[node]]
+  if( length( adj_lst_node ) == 0 )
+  {
+    return(0)  
+  }
+  sum <- 0
+  for(i in 1 : length( adj_lst_node ) )
+  {
+    sum <- sum + get.vertex.attribute(igraph, "vote",    adj_lst_node[i]    ) 
+  }
+  out <- sum/ length( adj_lst_node )
+  out
+}
+
+probability_vect <- function(igraph)
+{
+  vc <- vcount(igraph)
+  vect <- vector(mode = "numeric",vc)
+  sum <- 0
+  for( i in 1 : vc )
+  {
+    sum <- sum + probability_node(igraph,i)
+    vect[i] <- probability_node(igraph,i)
+  }
+  vect
+}
+
+probability_tot <- function(igraph)
+{
+  vect <- probability_vect(igraph)
+  out <- sum(vect) / vcount(igraph)
+}
+
+getOneVote <- function(igraph)
+{
+  vc <- vcount(igraph)
+  vect <- vector(mode = "numeric",vc)
+  for( i in 1 : vc)
+  {
+    vect[i] <- get.vertex.attribute(igraph, "vote",i) 
+  }
+  vect
+}
+
+vote_probability <- function(igraph,noise)
+{
+  p_v <- probability_vect(igraph)
+  len <- length(p_v)
+  f_p <- vector(mode = "numeric",len)
+  for(i in 1 : len  )
+  {
+    f_p[i] <- (1-2*noise)*p_v[i] + noise
+  }
+  f_p
+}
+
+vote <- function(igraph,noise)
+{
+  start_time <- Sys.time()
+  end_time <- Sys.time()
+  f_p <- vote_probability(igraph,noise)
+  end_time <- Sys.time()
+  exec_time <- (end_time-start_time)
+  print(exec_time)
+  vc <- vcount(igraph)
+  for( i in 1: vc)
+  {
+    if( runif(1) < f_p[i] )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=0)
+    }
+    else
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=1)
+    }
+  }
+  igraph
+}
+
+simulation <- function(igraph,noise,time)
+{
+  igraph <- initVoteBernoulli(igraph)
+  mat <- vector(mode = "numeric",(vcount(igraph)*time))
+  dim(mat) <- c(vcount(igraph),time)
+  for(i in 1: time)
+  {
+    mat[,i] <- getOneVote(igraph)
+    igraph <- vote(igraph,noise)
+    cat(i," over ",time,"\n")
+  }
+  mat
+}
+```
+
+Notice the diffrence intoduce by working with matrix in comparaison with for loops.
+
+The evolution of the voting rate can be repsented via the output matrix, however this data still need to be simplifyed in order to be more human readable. Here the role of the declare winner function is to inform us about the winner if the vote is done at the end of the simulation.
+
+### 3) Influenceing scenarios
+
+With a scale free graph of 501 nodes( to avoid Deuce), k = 3, m = 2, and for simulation of 0.01 noise and time = 3000, we will try to influence the vote.
+We will work in Jerry's Team.
+
+#### a) Scenario A
+
+We have the possibiliy convince 10 people to vote for Jerry. We will use the metrics to identify them.
+
+We want to have :
+
+  - Node connected to the giant conponent.
+  - Node with a samll lenght to all the others nodes.
+  - Node with high closness centrality.
+
+Functions n_length, reacheable_node and how_closness are used to identify nodes with an high influence.
+
+On the other side we have to take in consideration the limitation on the sum of degree of 100.
+First we use the how_bad_is_degree function. Then the function high_cut also play a role to eliminate the nodes with highest degree with a non linerar function.
+
+All thoses paramter can be tuned by hand with coefficient in order to impouve the ranking.
+
+Then to ensure that we do respect the degree condition we cycle down the top result until the condition is respected.
+
+Here is the code to do the selection of node to influence:
+```r
+selection <- function(igraph)
+{
+  vect_len        <- n_length(igraph)
+  vect_reach      <- reacheable_node(igraph)
+  vect_close      <- how_closness(igraph)
+  vect_bad_degree <- how_bad_is_degree(igraph)
+  
+  coef_len   <- 3
+  coef_reach <- 5
+  coef_close <- 1.5
+  
+  coef_bad_degree <- 1
+  alpha <- 0.013
+  
+  vect_rank_positif <- vect_len*coef_len + vect_reach*coef_reach + vect_close*coef_close
+    
+  vect_rank_negatif <- vect_bad_degree*coef_bad_degree
+  vect_rank_negatif <- high_cut(vect_rank_negatif,alpha)
+  print(vect_rank_negatif)
+  print(degree(igraph))
+  
+  vect_rank_tot <- vect_rank_positif - vect_rank_negatif
+  
+  nb_elect <- 10
+  pool <- vector(mode = "numeric",nb_elect)
+  ref <- 1
+  condition_is_ok <- FALSE
+  while(condition_is_ok == FALSE)
+  {
+    sorted <- sort.int(vect_rank_tot,decreasing = TRUE, index.return = TRUE)
+    for(i in ref : (ref+nb_elect) )
+    {
+      pool[(i-ref)] <- sorted$ix[i] 
+    }
+    vect_deg <- degree(igraph)
+    somm <- 0
+    #print( vect_deg[pool] )
+    for(i in 1:length(pool))
+    {
+      
+      somm <- somm + vect_deg[pool[i]]
+    }
+    if(100 > somm)
+    {
+      cat("Number of rank down to respect condition=",ref," (SUM of degree=",somm,")\n")
+      condition_is_ok <- TRUE
+    }
+    ref <- ref + 1
+  }
+  pool
+}
+
+high_cut <- function(inputvect,alpha)
+{
+  outputvect <- inputvect + alpha*inputvect*inputvect
+}
+
+how_closness <- function(igraph)
+{
+  tryCatch( vect_close <- closeness(igraph,normalized = TRUE) , warning=function() print("-") )
+  if( min(vect_close) == max(vect_close) )
+  {
+    print("May have pb w: how_closness")
+    return( c(rep(0,vcount(igraph)) ))
+  }
+  n_comp_min <- min(vect_close)
+  vect_close <- vect_close-n_comp_min
+  n_comp_max <- max(vect_close)
+  vect_close <- vect_close*100/n_comp_max
+  vect_close
+}
+
+how_bad_is_degree <- function(igraph)
+{
+  vect_deg <- degree(igraph) 
+  if( min(vect_deg) == max(vect_deg) )
+  {
+    print("May have pb w: how_bad_is_degree")
+    return( c(rep(0,vcount(igraph)) ))
+  }
+  n_comp_min <- min(vect_deg)
+  vect_deg <- vect_deg-n_comp_min
+  n_comp_max <- max(vect_deg)
+  vect_deg <- (vect_deg*100/n_comp_max)+1
+  vect_deg
+}
+
+
+
+reacheable_node <- function(igraph)
+{
+  Comp = clusters(igraph)
+  vect_reach <- Comp$csize[Comp$membership]
+  if( min(vect_reach) == max(vect_reach) )
+  {
+    #print("One giant Component")
+    return( c(rep(0,vcount(igraph)) ))
+  }
+  n_comp_min <- min(vect_reach)
+  vect_reach <- vect_reach-n_comp_min
+  n_comp_max <- max(vect_reach)
+  vect_reach <- vect_reach*100/n_comp_max
+  vect_reach
+}
+
+
+n_length <- function(igraph)
+{
+  nb_node <- vcount(igraph)
+  n_length_vect <- vector(mode = "numeric",nb_node)
+  for( i in 1:  nb_node)
+  {
+    bfs_i <- bfs(igraph,i,
+                 unreachable = FALSE,
+                 dist = TRUE);
+    #print(bfs_i$dist)
+    n_length_vect[i] <- sum(bfs_i$dist,na.rm = TRUE)/nb_node  
+  }
+  n_length_max <- max(n_length_vect)
+  
+  for( i in 1:  nb_node)
+  {
+    if( n_length_vect[i] == 0 )
+    {
+      n_length_vect[i] <- n_length_max
+    }
+  }
+  n_length_min <- min(n_length_vect)
+  
+  
+  n_length_vect <- (n_length_vect) - n_length_min
+  n_length_max <- max(n_length_vect)
+  n_length_vect <- 100 - (n_length_vect*100/n_length_max)
+}
+```
+
+Then the set node chossen is tested in simulation, with they vote force to 1. To ensure that that the our methods is ok we repeat simulation multiple time and observe the result. Bellow is the code to test the model.
+```r
+initVoteBernoulli <- function(igraph,sway_vector)
+{
+  for( i in 1: vcount(igraph))
+  {
+    if( runif(1) < 1/2 )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=1)
+    }
+    else
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=0)
+    }
+  }
+  nb_sway <- length(sway_vector)
+  for( i in 1 : nb_sway )
+  {
+    igraph <- set.vertex.attribute(igraph,"vote", sway_vector[i] ,value=0)
+  }
+  igraph
+}
+
+vote <- function(igraph,noise,N_vect,sway_vector)
+{
+  
+  f_p <- vote_probability(igraph,noise,N_vect)
+  vc <- vcount(igraph)
+  for( i in 1: vc)
+  {
+    if( runif(1) < f_p[i] )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=0)
+    }
+    else
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=1)
+    }
+  }
+  nb_sway <- length(sway_vector)
+  for( i in 1:nb_sway )
+  {
+    igraph <- set.vertex.attribute(igraph,"vote", sway_vector[i] ,value=0)
+  }
+  igraph
+}
+declare_winner <- function(mat)
+{
+  end_vote_vect <- mat[,ncol(mat)]
+  out <- vector(mode = "numeric",2)
+  
+  if( sum(end_vote_vect)/nrow(mat) == 0.5  )
+  {
+    cat("Deuce\n")
+  }else if( sum(end_vote_vect)/nrow(mat) < 0.5 )
+  {
+    cat("Jerry win with ",(sum(end_vote_vect)/nrow(mat)),"\n")
+    out[1] <- 0
+  }else if( sum(end_vote_vect)/nrow(mat) > 0.5 )
+  {
+    cat("Tom win with ",(sum(end_vote_vect)/nrow(mat)),"\n")
+    out[1] <- 1
+  }
+  out[2] <- (sum(end_vote_vect)/nrow(mat)) 
+  out
+}
+
+
+simulation <- function(igraph,noise,time,sway_vector)
+{
+  N_vect <- Nb_neighbors_vect(igraph)
+  
+  igraph <- initVoteBernoulli(igraph,sway_vector)
+  mat <- vector(mode = "numeric",(vcount(igraph)*time))
+  dim(mat) <- c(vcount(igraph),time)
+  for(i in 1: time)
+  {
+    mat[,i] <- getOneVote(igraph)
+    igraph <- vote(igraph,noise,N_vect,sway_vector)
+    #cat(i," over ",time,"\n")
+  }
+  win <- declare_winner(mat)
+}
+
+n <- 501
+k <- 3
+q <- 2
+
+igraph <- scale_free(n,k,q)
+sway_vector <- selection(igraph)
+
+noise <- 0.01
+time <- 3000
+
+out <-  0
+nb_simu <- 100
+winner <- 0
+score <- 0
+for(i in 1: nb_simu )
+{
+  out <- simulation(igraph,noise,time,sway_vector)
+  winner <- winner + out[1]
+  score <- score + out[2]
+  cat("Progress:",i*100/nb_simu,"%\n")
+}
+cat("TOM win in ",winner/nb_simu,"%\n")
+cat("Avreage score is",score/nb_simu,"%\n")
+```
+
+Unfortunaly the results did not seem to be influenced by our method.
+
+#### b) Introducting Zealots.
+
+Zealots are people that can't change of opinion. To add them into our model we first define on witch node they are: 
+
+```r
+zelot <- function(igraph)
+{
+  nb_node <- floor(0.4*vcount(igraph))
+  nb_node
+  vect_zelot <- vector(mode = "numeric",vcount(igraph))
+  for(i in 1: vcount(igraph) )
+  {
+    if( runif(1)>0.8 )
+    {
+      vect_zelot[i] <- 1
+    }else if( runif(1) < 0.2 )
+    {
+      vect_zelot[i] <- 0
+    }else
+    {
+      vect_zelot[i] <- -1
+    }
+  }
+  vect_zelot
+}
+
+initZelot <- function(igraph,zelot_vector)
+{
+  for( i in 1: vcount(igraph))
+  {
+    if( zelot_vector[i] == 1 )
+    {
+      igraph <- set.vertex.attribute(igraph,"zelot", i ,value=1)
+    }
+    else if (zelot_vector[i] == 0 )
+    {
+      igraph <- set.vertex.attribute(igraph,"zelot", i ,value=0)
+    }else
+    {
+      igraph <- set.vertex.attribute(igraph,"zelot", i ,value=-1)
+    }
+  }
+  igraph
+}
+```
+The voting function are adapted:
+```r
+initVoteBernoulli <- function(igraph,sway_vector,zelot_vector)
+{
+  for( i in 1: vcount(igraph))
+  {
+    if( runif(1) < 1/2 )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=1)
+    }
+    else
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=0)
+    }
+  }
+  for( i in 1: vcount(igraph))
+  {
+    if( zelot_vector[i] == 1 )
+    {
+      igraph <- set.vertex.attribute(igraph,"zelot", i ,value=1)
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=1)
+    }
+    else if (zelot_vector[i] == 0 )
+    {
+      igraph <- set.vertex.attribute(igraph,"zelot", i ,value=0)
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=0)
+    }else
+    {
+      igraph <- set.vertex.attribute(igraph,"zelot", i ,value=-1)
+    }
+  }
+  nb_sway <- length(sway_vector)
+  for( i in 1 : nb_sway )
+  {
+    igraph <- set.vertex.attribute(igraph,"vote", sway_vector[i] ,value=1)
+  }
+  igraph
+}
+
+vote <- function(igraph,noise,N_vect,sway_vector,zelot_vector)
+{
+  
+  f_p <- vote_probability(igraph,noise,N_vect)
+  vc <- vcount(igraph)
+  for( i in 1: vc)
+  {
+    if( runif(1) < f_p[i] )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=0)
+    }
+    else
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=1)
+    }
+  }
+  for( i in 1: vcount(igraph))
+  {
+    if( zelot_vector[i] == 1 )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=1)
+    }
+    else if (zelot_vector[i] == 0 )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=0)
+    }
+  }
+  
+  nb_sway <- length(sway_vector)
+  for( i in 1:nb_sway )
+  {
+    igraph <- set.vertex.attribute(igraph,"vote", sway_vector[i] ,value=1)
+  }
+  igraph
+}
+
+```
+
+Then as for the others parameters we remouve them from the ranking with the following trick: 
+
+```r
+is_zelot <- function(igraph)
+{
+  nb <- vcount(igraph)
+  vect_zelot <- vector(mode = "numeric",nb)
+  for( i  in 1: nb)
+  {
+    if( get.vertex.attribute(igraph, "zelot",i) == 1 || get.vertex.attribute(igraph, "zelot",i) == 0 )
+    {
+      vect_zelot[i] <- 99999999
+    }else if(get.vertex.attribute(igraph, "zelot",i) == -1 )
+    {
+      vect_zelot[i] <- 0
+    }
+  }
+  vect_zelot
+}
+
+selection <- function(igraph)
+{
+  vect_len        <- n_length(igraph)
+  vect_reach      <- reacheable_node(igraph)
+  vect_close      <- how_closness(igraph)
+  vect_bad_degree <- how_bad_is_degree(igraph)
+  vect_zelot      <- is_zelot(igraph)
+  
+  coef_len   <- 3
+  coef_reach <- 5
+  coef_close <- 1.5
+  
+  coef_bad_degree <- 1
+  alpha <- 0.013
+  
+  vect_rank_positif <- vect_len*coef_len + vect_reach*coef_reach + vect_close*coef_close
+    
+  vect_rank_negatif <- vect_bad_degree*coef_bad_degree + vect_zelot
+  vect_rank_negatif <- high_cut(vect_rank_negatif,alpha)
+  vect_rank_tot <- vect_rank_positif - vect_rank_negatif
+
+  print(vect_rank_tot)
+    
+  nb_elect <- 10
+  pool <- vector(mode = "numeric",nb_elect)
+  ref <- 1
+  condition_is_ok <- FALSE
+  while(condition_is_ok == FALSE)
+  {
+    sorted <- sort.int(vect_rank_tot,decreasing = TRUE, index.return = TRUE)
+    for(i in ref : (ref+nb_elect) )
+    {
+      pool[(i-ref)] <- sorted$ix[i] 
+    }
+    vect_deg <- degree(igraph)
+    somm <- 0
+    #print( vect_deg[pool] )
+    for(i in 1:length(pool))
+    {
+      
+      somm <- somm + vect_deg[pool[i]]
+    }
+    if(100 > somm)
+    {
+      cat("Number of rank down to respect condition=",ref," (SUM of degree=",somm,")\n")
+      condition_is_ok <- TRUE
+    }
+    ref <- ref + 1
+  }
+  pool
+}
+```
+
+Then to run the simulation do the following call in the next order:
+
+```r
+n <- 501
+k <- 3
+q <- 2
+
+igraph <- scale_free(n,k,q)
+zelot_vector <- zelot(igraph)
+igraph <- initZelot(igraph,zelot_vector)
+sway_vector <- selection(igraph)
+
+
+noise <- 0.001
+time <- 3000
+
+out <-  0
+nb_simu <- 3
+winner <- 0
+score <- 0
+for(i in 1: nb_simu )
+{
+  out <- simulation(igraph,noise,time,sway_vector,zelot_vector)
+  winner <- winner + out[1]
+  score <- score + out[2]
+  cat("Progress:",i*100/nb_simu,"%\n")
+}
+cat("TOM win in ",winner/nb_simu,"%\n")
+cat("Avreage score is",score/nb_simu,"%\n")
+```
+
+With the zealot the effect of the 10 influenced node seem increassed.
+
+#### c) Effect of remouving node.
+
+As for the nodes, we can influence the network by changing its topology. However, finding the edges to remouve might be more complicated that for nodes in the voter model. Because my proposition of node influencing did not work well, and limitation in time to execute this function: I will not implement it.
+
+## TP4
+
+The fourth practical is about epidemic models. We will implement a SIR (Susceptible, Infectious, Recovered) model. 
+
+### 1 R implementation
+
+Below you will find a function that simulate the spread of the epidemic in a SIR meodel. The evolution of the number of Suceptible, Infected and Recovered can be representated as a function of the time:
+
+```r
+library(igraph)
+
+Erdos_Renyi_optimized <- function(n,p)
+{
+  nb_tri <- n*(n-1)/2
+  mat <- diag(0,nrow = n, ncol = n)
+  vect_rand <- runif(nb_tri , min = 0, max = 1) - p
+  for(i in 1:nb_tri)
+  {
+    if(vect_rand[i]>0)
+    {
+      vect_rand[i] <- 0 
+    }
+    else
+    {
+      vect_rand[i] <- 1 
+    }
+  }
+  mat[lower.tri(mat)] <- vect_rand
+  mat <- t(mat)
+  mat[lower.tri(mat)] <- vect_rand
+  igraph <- graph_from_adjacency_matrix(mat,mode = c("undirected"))
+  igraph
+}
+
+plot_epidemic_curves <- function(mat_res,time)
+{
+  #print(mat_res)
+  plot( x = c(0:time), y = mat_res[2,],xlab="days",ylab="Percentage of people",type="b",col="green", ylim=c(1,100),main="Evolution of SIR model epidemic")
+  lines(x= c(0:time), y = mat_res[3,],type="b",col="blue")
+  lines(x= c(0:time), y = mat_res[1,],type="b",col="red")
+  legend( ( time-(time*0.15) ), 90, legend=c("Suceptible", "Infected","Recovered"),
+          col=c("green","blue","red"), lty=1:3, cex=0.8)
+}
+
+epidemic_plot <- function(igraph,mainstr)
+{
+  nb_node <- vcount(igraph)
+  for(i in 1: nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(1,0,0) )
+    }
+    else if (node_status == "s" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,1,0) )
+    }
+    else if(node_status == "r" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,0,1) )
+    }
+    else{
+      print("BUG PLOT attribute")
+    }
+  }
+  for(i in 1: nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"i_time", i)
+
+    if( node_status > 0 )
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, node_status  )
+    }else if( node_status == 0 )
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, "R"  )
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,0,1) )
+    }else
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, "S"  )
+    }
+  }
+  plot(igraph, main = mainstr )
+}
+
+is_unique <- function(vect)
+{
+    isunique <- TRUE
+    for(i in 1: length(vect))
+    {
+        iterator <- vect[i]
+        for(j in 1:length(vect))
+        {
+            if(j != i)
+            {
+                if(vect[j] == vect[i])
+                {
+                    isunique <- FALSE
+                }
+            }
+        }
+    }
+    isunique
+}
+
+# The way we ensure uniqueness may be improuved with faster (and nicer) algorithm
+ensure_unique <- function(vect){
+    while(is_unique(vect) != TRUE)
+    {
+        for(i in 1: length(vect))
+        {
+            iterator <- vect[i]
+            for(j in 1:length(vect))
+            {
+                if(j != i)
+                {
+                    if(iterator == vect[j] )
+                    {
+                        vect[j] <- floor(runif(1,min=1,max=length(vect)))
+                    }
+                }
+            }
+        }
+    }
+    vect
+}
+
+init_epidemic <- function(igraph,n_0,n_d)
+{
+  nb_node <- vcount(igraph)
+  Infected_vect <- floor(runif(n_0,min=1,max=nb_node))
+  Infected_vect <- ensure_unique(Infected_vect)
+
+  igraph <- set.vertex.attribute(igraph,"epidemic", value="s")
+  igraph <- set.vertex.attribute(igraph,"i_time", value = -1 )
+  for( i in 1 : n_0 )
+  {
+    igraph <- set.vertex.attribute(igraph,"epidemic", Infected_vect[i] ,value="i")
+    igraph <- set.vertex.attribute(igraph,"i_time", Infected_vect[i] ,value= n_d )
+  }
+  stat_days(igraph)
+  igraph
+}
+
+infected_heal <- function(igraph)
+{
+  nb_node <- vcount(igraph)
+  for( i in 1: nb_node)
+  {
+    node_time_status <- get.vertex.attribute(igraph,"i_time", i)
+    if( node_time_status > 0 )
+    {
+      igraph <- set.vertex.attribute(igraph,"i_time", i ,value= (node_time_status - 1) )
+    }
+    if( node_time_status == 1 )
+    {
+      #cat("Last day of infection ? \n")
+      igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="r")
+    }
+  }
+  igraph
+}
+
+transmission <- function(igraph,p_epidemic,n_d)
+{
+  igraph <- infected_heal(igraph)
+  nb_node <- vcount(igraph)
+  
+  adj_mat <- as_adjacency_matrix(igraph, type = c("both"))
+  
+  vect_i <- vector(mode = "numeric",nb_node)
+  vect_i_opo <- vector(mode = "numeric",nb_node)
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      vect_i[i] <- 1
+      vect_i_opo[i] <- 0
+    }
+    else
+    {
+      vect_i[i] <- 0
+      vect_i_opo[i] <- 1
+    }
+  }
+  
+  vect_r_op <- vector(mode = "numeric",nb_node)
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "r" )
+    {
+      vect_r_op[i] <- 0
+    }
+    else
+    {
+      vect_r_op[i] <- 1
+    }
+  }
+
+ 
+  neigbour_infected_vect <- adj_mat%*%vect_i
+  try_infect <- as.vector(neigbour_infected_vect)*vect_r_op*vect_i_opo
+  for(i in 1:nb_node)
+  {
+    if(try_infect[i] > 0 )
+    {
+      for(j in 1:try_infect[i] )
+      {
+        if(runif(1) < p_epidemic)
+        {
+          igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="i")
+          igraph <- set.vertex.attribute(igraph,"i_time", i ,value= n_d )
+          #cat("We inflect node NÂ°",i,"\n")
+        }
+      }
+    }
+  }
+  for(i in 1:nb_node)
+  {
+    if(try_infect[i] > 0 )
+    {
+      for(j in 1:try_infect[i] )
+      {
+        if(runif(1) < p_epidemic)
+        {
+          igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="i")
+          igraph <- set.vertex.attribute(igraph,"i_time", i ,value= n_d )
+          #cat("We inflect node NÂ°",i,"\n")
+        }
+      }
+    }
+  }
+  igraph
+}
+
+stat_days <- function(igraph)
+{
+  nb_node <- vcount(igraph)
+  tot_i <- 0
+  tot_s <- 0
+  tot_r <- 0
+  res <- vector(mode = "numeric")
+  for(i in 1:nb_node)
+  {
+    epi <- get.vertex.attribute(igraph,"epidemic", i )
+    if(epi == "i" )
+    {
+      tot_i <- tot_i + 1
+    }
+    if(epi == "s" )
+    {
+      tot_s <- tot_s + 1
+    }
+    if(epi == "r" )
+    {
+      tot_r <- tot_r + 1
+    }
+  }
+  res[1] <- tot_i
+  res[2] <- tot_s
+  res[3] <- tot_r
+  cat("Sucesptible: ",res[2]," Infected: ",res[1],"Recoverd: ",res[3],"\n")
+  res
+}
+
+simulation <- function(igraph,p_epidemic,n_d,time,confinement_high,confinement_low,restriction_percentages,travel_limitation)
+{
+  cat("Begin simulation \n")
+  init_graph <- igraph
+  mat_res <- matrix(ncol = time+1,nrow = 3 )
+  mat_res[,1 ] <- stat_days(igraph)
+  if(travel_limitation == TRUE )
+  {
+    restrictions <- FALSE
+    for(i in 1:time )
+    {
+      strday <- c("Day N°",toString(i))
+      cat(strday,"\n")
+      igraph <- transmission(igraph,p_epidemic,n_d)
+  
+      if(restrictions == FALSE && confine_required(igraph,confinement_high,confinement_low,restrictions) == TRUE  )
+      {
+        cat("Day of limitations implemention\n")
+        igraph <- graph_with_restrictions(igraph,restriction_percentages)
+        restrictions <- TRUE
+      }
+      if(restrictions == TRUE && confine_required(igraph,confinement_high,confinement_low,restrictions) == FALSE  )
+      {
+        cat("Day of UNDO limitations implemention\n")
+        igraph <- undo_graph_with_restrictions(igraph,init_graph)
+        restrictions <- FALSE
+      }
+      restrans <- stat_days(igraph)
+      #epidemic_plot(igraph,strday)
+      mat_res[, (i+1) ] <- restrans
+    }
+  }else if(travel_limitation == FALSE ){
+    for(i in 1:time )
+    {
+      strday <- c("Day N°",toString(i))
+      cat(strday,"\n")
+      igraph <- transmission(igraph,p_epidemic,n_d)
+      restrans <- stat_days(igraph)
+      #epidemic_plot(igraph,strday)
+      mat_res[, (i+1) ] <- restrans
+    }
+  }
+  mat_res
+}
+
+# Dire que le graph devrait etre en constante évolution ce qui plus repésentatif de la réalité plutot que de revenir a un etat initial fixe..
+undo_graph_with_restrictions <- function(graph_now,graph_init){
+  nb_node <- vcount(graph_now)
+  for( i in 1: nb_node)
+  {
+    epi <- get.vertex.attribute(graph_now,"epidemic", i )
+    itime <- get.vertex.attribute(graph_now,"i_time", i )
+    graph_init <- set.vertex.attribute(graph_init,"epidemic", i ,value=epi)
+    graph_init <- set.vertex.attribute(graph_init,"i_time", i ,value=itime)
+  }
+  graph_init
+}
+
+graph_with_restrictions <- function(igraph,restriction_percentages){
+  edge_lst <- as_edgelist(igraph)
+  
+  delete_vect <- runif(nrow(edge_lst))
+  vect_bind <- vector(mode = "numeric",nrow(edge_lst))
+  for(i in nrow(edge_lst):1 )
+  {
+    if( delete_vect[i] > (restriction_percentages/100)  )
+    {
+       #edge_lst[i,3] <- 0
+      vect_bind[i] <- 0
+    }else{
+      vect_bind[i] <- 1
+      #edge_lst[i,3] <- 1
+    }
+  }
+  edge_lst <- cbind(edge_lst,vect_bind)
+  for(i in nrow(edge_lst):1 )
+  {
+    #cat("del? \t",i,"\t",edge_lst[i,3])
+    if(edge_lst[i,3] == 1)
+    {
+      #cat("We sup\n")
+      edge_lst <- edge_lst[-i,]
+    }else{
+      #cat("\n")
+    }
+    
+  }
+  edge_lst <- edge_lst[,-3]
+  limited_graph <- graph_from_edgelist(edge_lst, directed = FALSE)
+  
+  # cat("LIMITED ROW ",nrow(as_edgelist(limited_graph)),"Nbnode=",vcount(limited_graph) ,"\n")
+  # cat("UNLIMITED ROW ", nrow(as_edgelist(igraph)),"Nbnode=",vcount(limited_graph),"\n")
+  
+  nb_node <- vcount(igraph)
+  for( i in 1: nb_node)
+  {
+    epi <- get.vertex.attribute(igraph,"epidemic", i )
+    itime <- get.vertex.attribute(igraph,"i_time", i )
+    limited_graph <- set.vertex.attribute(limited_graph,"epidemic", i ,value=epi)
+    limited_graph <- set.vertex.attribute(limited_graph,"i_time", i ,value=itime)
+  }
+  
+  #vertex_attr(limited_graph) <- vertex_attr(igraph)
+  # cat("LIMITED ROW ",nrow(as_edgelist(limited_graph)),"Nbnode=",vcount(limited_graph) ,"\n")
+  # cat("UNLIMITED ROW ", nrow(as_edgelist(igraph)),"Nbnode=",vcount(limited_graph),"\n")
+  # print(vertex_attr(limited_graph))
+  # print("=====================")
+  # print(vertex_attr(igraph))
+  #epidemic_plot(igraph,"Unrestrited")
+  #epidemic_plot(igraph,"Restrited")
+  limited_graph
+}
+
+confine_required <- function(igraph,confinement_high,confinement_low,restrictions)
+{
+  nb_node <- vcount(igraph)
+  nb_i <- 0
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      nb_i <- nb_i+1
+    }
+  }
+  if(restrictions == FALSE)
+  {
+    if(nb_i > confinement_high)
+    {
+      restrictions <- TRUE
+    }
+  }else if( restrictions == TRUE )
+  {
+    if( nb_i < confinement_low )
+    {
+      restrictions <- FALSE
+    }
+  }
+  # cat("Nb of infected people:",nb_i,"\n")
+  # cat("Contact limitation ? ",restrictions,"\n")
+  restrictions
+}
+
+
+R0_calc <- function(result_mat,nb_node, n_d)
+{
+  nb_day <- ncol(result_mat)
+  gam <- 1/n_d
+  outmat <- matrix(nrow = 6, ncol = nb_day)
+  
+  x <- result_mat[1,]/nb_node
+  s <- result_mat[2,]/nb_node
+  r <- result_mat[3,]/nb_node
+  
+  d_x <- vector(mode = "numeric",nb_day)
+  d_s <- vector(mode = "numeric",nb_day)
+  d_r <- vector(mode = "numeric",nb_day)
+  beta <- vector(mode = "numeric",nb_day)
+  gamma <- vector(mode = "numeric",nb_day)
+  for(i in 2:nb_day )
+  {
+    d_x[i] <- x[i] - x[i-1]
+    d_s[i] <- s[i] - s[i-1]
+    d_r[i] <- r[i] - r[i-1]
+  }
+  for(i in 2:nb_day )
+  {
+    beta[i] <- d_s[i]/(s[i]*x[i])
+  }
+  print(beta/0.1)
+}
+
+n <- 2000
+p <- 0.01
+
+p_epidemic <- 0.01
+time <- 70
+
+n_0 <- 10
+n_d <- 10
+
+travel_limitation <- FALSE
+confinement_high <- 50
+confinement_low <- 10
+restriction_percentages <- 80
+
+
+
+ig <- Erdos_Renyi_optimized(n,p)
+cat("Erdos Renyi created\n")
+ig <- init_epidemic(ig,n_0,n_d)
+#epidemic_plot(ig,"Day One")
+cat("Infection initialized \n")
+res <- simulation(ig,p_epidemic,n_d,time,confinement_high,confinement_low,restriction_percentages,travel_limitation)
+plot_epidemic_curves(100*res/n,time)
+
+```
+
+Here is the output of this simulation: 
+
+![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\TP4_Q2.png)
+
+Notice that this output is similar to the model represented by the follwing equations:
+
+$$
+\left\{
+    \begin{array}{lll}
+        S'(t) = -\beta S(t) I(t) \\
+        I'(t) = \beta S(t) I(t) - \gamma I(t) \\
+        R'(t) = \gamma I(t)        
+    \end{array}
+\right.
+$$
+
+To solve this model we have used the following code inspired by the http://rstudio-pubs-static.s3.amazonaws.com/6852_c59c5a2e8ea3456abbeb017185de603e.html
+
+```r
+## Load deSolve package
+library(deSolve)
+
+## Create an SIR function
+sir <- function(time, state, parameters) {
+  
+  with(as.list(c(state, parameters)), {
+    
+    dS <- -beta * S * I
+    dI <-  beta * S * I - gamma * I
+    dR <-                 gamma * I
+    
+    return(list(c(dS, dI, dR)))
+  })
+}
+
+n <- 2000
+n_0 <- 10
+
+### Set parameters
+## Proportion in each compartment:
+init       <- c(S = (n-n_0)/n, I = n_0/n, R = 0.0)
+## beta: infection parameter; gamma: recovery parameter
+parameters <- c(beta = 0.5, gamma = 0.11)
+## Time frame
+times      <- seq(0, 70, by = 1)
+
+## Solve using ode (General Solver for Ordinary Differential Equations)
+out <- ode(y = init, times = times, func = sir, parms = parameters)
+## change to data frame
+out <- as.data.frame(out)
+## Delete time variable
+out$time <- NULL
+## Show data
+head(out, 10)
+
+## Plot
+matplot(x = times, y = out, type = "l",
+        xlab = "Time", ylab = "Susceptible and Recovered", main = "SIR Model",
+        lwd = 1, lty = 1, bty = "l", col = 2:4)
+
+## Add legend
+legend(40, 0.7, c("Susceptible", "Infected", "Recovered"), pch = 1, col = 2:4, bty = "n")
+```
+
+![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\solver.png)
+
+Notice the general behaving is simillar.
+
+Then we can adjust beta and gamma to be closer of our simulation.
+
+When your are satisfied with your $\beta$ and $\gamma$ estimation you can estimated $R_{0}$ with: 
+$$
+R_{0}={\frac {\beta }{\gamma }}
+$$
+
+
+
+### 5 Effect of confine people
+
+Now we will add rule to limit social links of people. We are trying to simulate the effect of confinement or curfew. The modelisation we use is a reduction of the number of edges under certain conditions. The following code simulate this behaving.
+
+```r
+library(igraph)
+
+Erdos_Renyi_optimized <- function(n,p)
+{
+  nb_tri <- n*(n-1)/2
+  mat <- diag(0,nrow = n, ncol = n)
+  vect_rand <- runif(nb_tri , min = 0, max = 1) - p
+  for(i in 1:nb_tri)
+  {
+    if(vect_rand[i]>0)
+    {
+      vect_rand[i] <- 0 
+    }
+    else
+    {
+      vect_rand[i] <- 1 
+    }
+  }
+  mat[lower.tri(mat)] <- vect_rand
+  mat <- t(mat)
+  mat[lower.tri(mat)] <- vect_rand
+  igraph <- graph_from_adjacency_matrix(mat,mode = c("undirected"))
+  igraph
+}
+
+plot_epidemic_curves <- function(mat_res,time)
+{
+  #print(mat_res)
+  plot( x = c(0:time), y = mat_res[2,],xlab="days",ylab="Percentage of people",type="b",col="green", ylim=c(1,100),main="Evolution of SIR model epidemic")
+  lines(x= c(0:time), y = mat_res[3,],type="b",col="blue")
+  lines(x= c(0:time), y = mat_res[1,],type="b",col="red")
+  legend( ( time-(time*0.15) ), 90, legend=c("Suceptible", "Infected","Recovered"),
+          col=c("green","blue","red"), lty=1:3, cex=0.8)
+}
+
+epidemic_plot <- function(igraph,mainstr)
+{
+  nb_node <- vcount(igraph)
+  for(i in 1: nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(1,0,0) )
+    }
+    else if (node_status == "s" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,1,0) )
+    }
+    else if(node_status == "r" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,0,1) )
+    }
+    else{
+      print("BUG PLOT attribute")
+    }
+  }
+  for(i in 1: nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"i_time", i)
+
+    if( node_status > 0 )
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, node_status  )
+    }else if( node_status == 0 )
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, "R"  )
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,0,1) )
+    }else
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, "S"  )
+    }
+  }
+  plot(igraph, main = mainstr )
+}
+
+is_unique <- function(vect)
+{
+    isunique <- TRUE
+    for(i in 1: length(vect))
+    {
+        iterator <- vect[i]
+        for(j in 1:length(vect))
+        {
+            if(j != i)
+            {
+                if(vect[j] == vect[i])
+                {
+                    isunique <- FALSE
+                }
+            }
+        }
+    }
+    isunique
+}
+
+# The way we ensure uniqueness may be improuved with faster (and nicer) algorithm
+ensure_unique <- function(vect){
+    while(is_unique(vect) != TRUE)
+    {
+        for(i in 1: length(vect))
+        {
+            iterator <- vect[i]
+            for(j in 1:length(vect))
+            {
+                if(j != i)
+                {
+                    if(iterator == vect[j] )
+                    {
+                        vect[j] <- floor(runif(1,min=1,max=length(vect)))
+                    }
+                }
+            }
+        }
+    }
+    vect
+}
+
+init_epidemic <- function(igraph,n_0,n_d)
+{
+  nb_node <- vcount(igraph)
+  Infected_vect <- floor(runif(n_0,min=1,max=nb_node))
+  Infected_vect <- ensure_unique(Infected_vect)
+
+  igraph <- set.vertex.attribute(igraph,"epidemic", value="s")
+  igraph <- set.vertex.attribute(igraph,"i_time", value = -1 )
+  for( i in 1 : n_0 )
+  {
+    igraph <- set.vertex.attribute(igraph,"epidemic", Infected_vect[i] ,value="i")
+    igraph <- set.vertex.attribute(igraph,"i_time", Infected_vect[i] ,value= n_d )
+  }
+  stat_days(igraph)
+  igraph
+}
+
+infected_heal <- function(igraph)
+{
+  nb_node <- vcount(igraph)
+  for( i in 1: nb_node)
+  {
+    node_time_status <- get.vertex.attribute(igraph,"i_time", i)
+    if( node_time_status > 0 )
+    {
+      igraph <- set.vertex.attribute(igraph,"i_time", i ,value= (node_time_status - 1) )
+    }
+    if( node_time_status == 1 )
+    {
+      #cat("Last day of infection ? \n")
+      igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="r")
+    }
+  }
+  igraph
+}
+
+transmission <- function(igraph,p_epidemic,n_d)
+{
+  igraph <- infected_heal(igraph)
+  nb_node <- vcount(igraph)
+  
+  adj_mat <- as_adjacency_matrix(igraph, type = c("both"))
+  
+  vect_i <- vector(mode = "numeric",nb_node)
+  vect_i_opo <- vector(mode = "numeric",nb_node)
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      vect_i[i] <- 1
+      vect_i_opo[i] <- 0
+    }
+    else
+    {
+      vect_i[i] <- 0
+      vect_i_opo[i] <- 1
+    }
+  }
+  
+  vect_r_op <- vector(mode = "numeric",nb_node)
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "r" )
+    {
+      vect_r_op[i] <- 0
+    }
+    else
+    {
+      vect_r_op[i] <- 1
+    }
+  }
+
+ 
+  neigbour_infected_vect <- adj_mat%*%vect_i
+  try_infect <- as.vector(neigbour_infected_vect)*vect_r_op*vect_i_opo
+  for(i in 1:nb_node)
+  {
+    if(try_infect[i] > 0 )
+    {
+      for(j in 1:try_infect[i] )
+      {
+        if(runif(1) < p_epidemic)
+        {
+          igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="i")
+          igraph <- set.vertex.attribute(igraph,"i_time", i ,value= n_d )
+          #cat("We inflect node NÂ°",i,"\n")
+        }
+      }
+    }
+  }
+  for(i in 1:nb_node)
+  {
+    if(try_infect[i] > 0 )
+    {
+      for(j in 1:try_infect[i] )
+      {
+        if(runif(1) < p_epidemic)
+        {
+          igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="i")
+          igraph <- set.vertex.attribute(igraph,"i_time", i ,value= n_d )
+          #cat("We inflect node NÂ°",i,"\n")
+        }
+      }
+    }
+  }
+  igraph
+}
+
+stat_days <- function(igraph)
+{
+  nb_node <- vcount(igraph)
+  tot_i <- 0
+  tot_s <- 0
+  tot_r <- 0
+  res <- vector(mode = "numeric")
+  for(i in 1:nb_node)
+  {
+    epi <- get.vertex.attribute(igraph,"epidemic", i )
+    if(epi == "i" )
+    {
+      tot_i <- tot_i + 1
+    }
+    if(epi == "s" )
+    {
+      tot_s <- tot_s + 1
+    }
+    if(epi == "r" )
+    {
+      tot_r <- tot_r + 1
+    }
+  }
+  res[1] <- tot_i
+  res[2] <- tot_s
+  res[3] <- tot_r
+  cat("Sucesptible: ",res[2]," Infected: ",res[1],"Recoverd: ",res[3],"\n")
+  res
+}
+
+simulation <- function(igraph,p_epidemic,n_d,time,confinement_high,confinement_low,restriction_percentages)
+{
+  cat("Begin simulation \n")
+  init_graph <- igraph
+  mat_res <- matrix(ncol = time+1,nrow = 3 )
+  mat_res[,1 ] <- stat_days(igraph)
+  
+  restrictions <- FALSE
+  for(i in 1:time )
+  {
+    strday <- c("Day N°",toString(i))
+    cat(strday,"\n")
+    igraph <- transmission(igraph,p_epidemic,n_d)
+
+    if(restrictions == FALSE && confine_required(igraph,confinement_high,confinement_low,restrictions) == TRUE  )
+    {
+      cat("Day of limitations implemention\n")
+      igraph <- graph_with_restrictions(igraph,restriction_percentages)
+      restrictions <- TRUE
+    }
+    if(restrictions == TRUE && confine_required(igraph,confinement_high,confinement_low,restrictions) == FALSE  )
+    {
+      cat("Day of UNDO limitations implemention\n")
+      igraph <- undo_graph_with_restrictions(igraph,init_graph)
+      restrictions <- FALSE
+    }
+    restrans <- stat_days(igraph)
+    #epidemic_plot(igraph,strday)
+    mat_res[, (i+1) ] <- restrans
+  }
+  mat_res
+}
+
+undo_graph_with_restrictions <- function(graph_now,graph_init){
+  nb_node <- vcount(graph_now)
+  for( i in 1: nb_node)
+  {
+    epi <- get.vertex.attribute(graph_now,"epidemic", i )
+    itime <- get.vertex.attribute(graph_now,"i_time", i )
+    graph_init <- set.vertex.attribute(graph_init,"epidemic", i ,value=epi)
+    graph_init <- set.vertex.attribute(graph_init,"i_time", i ,value=itime)
+  }
+  graph_init
+}
+
+graph_with_restrictions <- function(igraph,restriction_percentages){
+  edge_lst <- as_edgelist(igraph)
+  
+  delete_vect <- runif(nrow(edge_lst))
+  vect_bind <- vector(mode = "numeric",nrow(edge_lst))
+  for(i in nrow(edge_lst):1 )
+  {
+    if( delete_vect[i] > (restriction_percentages/100)  )
+    {
+       #edge_lst[i,3] <- 0
+      vect_bind[i] <- 0
+    }else{
+      vect_bind[i] <- 1
+      #edge_lst[i,3] <- 1
+    }
+  }
+  edge_lst <- cbind(edge_lst,vect_bind)
+  for(i in nrow(edge_lst):1 )
+  {
+    #cat("del? \t",i,"\t",edge_lst[i,3])
+    if(edge_lst[i,3] == 1)
+    {
+      #cat("We sup\n")
+      edge_lst <- edge_lst[-i,]
+    }else{
+      #cat("\n")
+    }
+    
+  }
+  edge_lst <- edge_lst[,-3]
+  limited_graph <- graph_from_edgelist(edge_lst, directed = FALSE)
+  
+  # cat("LIMITED ROW ",nrow(as_edgelist(limited_graph)),"Nbnode=",vcount(limited_graph) ,"\n")
+  # cat("UNLIMITED ROW ", nrow(as_edgelist(igraph)),"Nbnode=",vcount(limited_graph),"\n")
+  
+  nb_node <- vcount(igraph)
+  for( i in 1: nb_node)
+  {
+    epi <- get.vertex.attribute(igraph,"epidemic", i )
+    itime <- get.vertex.attribute(igraph,"i_time", i )
+    limited_graph <- set.vertex.attribute(limited_graph,"epidemic", i ,value=epi)
+    limited_graph <- set.vertex.attribute(limited_graph,"i_time", i ,value=itime)
+  }
+  
+  #vertex_attr(limited_graph) <- vertex_attr(igraph)
+  # cat("LIMITED ROW ",nrow(as_edgelist(limited_graph)),"Nbnode=",vcount(limited_graph) ,"\n")
+  # cat("UNLIMITED ROW ", nrow(as_edgelist(igraph)),"Nbnode=",vcount(limited_graph),"\n")
+  # print(vertex_attr(limited_graph))
+  # print("=====================")
+  # print(vertex_attr(igraph))
+  #epidemic_plot(igraph,"Unrestrited")
+  #epidemic_plot(igraph,"Restrited")
+  limited_graph
+}
+
+confine_required <- function(igraph,confinement_high,confinement_low,restrictions)
+{
+  nb_node <- vcount(igraph)
+  nb_i <- 0
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      nb_i <- nb_i+1
+    }
+  }
+  if(restrictions == FALSE)
+  {
+    if(nb_i > confinement_high)
+    {
+      restrictions <- TRUE
+    }
+  }else if( restrictions == TRUE )
+  {
+    if( nb_i < confinement_low )
+    {
+      restrictions <- FALSE
+    }
+  }
+  # cat("Nb of infected people:",nb_i,"\n")
+  # cat("Contact limitation ? ",restrictions,"\n")
+  restrictions
+}
+
+
+R0_calc <- function(result_mat,nb_node, n_d)
+{
+  nb_day <- ncol(result_mat)
+  gam <- 1/n_d
+  outmat <- matrix(nrow = 6, ncol = nb_day)
+  
+  x <- result_mat[1,]/nb_node
+  s <- result_mat[2,]/nb_node
+  r <- result_mat[3,]/nb_node
+  
+  d_x <- vector(mode = "numeric",nb_day)
+  d_s <- vector(mode = "numeric",nb_day)
+  d_r <- vector(mode = "numeric",nb_day)
+  beta <- vector(mode = "numeric",nb_day)
+  gamma <- vector(mode = "numeric",nb_day)
+  for(i in 2:nb_day )
+  {
+    d_x[i] <- x[i] - x[i-1]
+    d_s[i] <- s[i] - s[i-1]
+    d_r[i] <- r[i] - r[i-1]
+  }
+  for(i in 2:nb_day )
+  {
+    beta[i] <- d_s[i]/(s[i]*x[i])
+  }
+  print(beta/0.1)
+}
+
+n <- 2000
+p <- 0.01
+
+p_epidemic <- 0.01
+time <- 1000
+
+n_0 <- 10![limitation](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\limitation.png)
+n_d <- 10
+
+confinement_high <- 50
+confinement_low <- 10
+restriction_percentages <- 80
+
+ig <- Erdos_Renyi_optimized(n,p)
+cat("Erdos Renyi created\n")
+ig <- init_epidemic(ig,n_0,n_d)
+epidemic_plot(ig,"Day One")
+cat("Infection initialized \n")
+res <- simulation(ig,p_epidemic,n_d,time,confinement_high,confinement_low,restriction_percentages)
+plot_epidemic_curves(100*res/n,time)
+```
+Notice that removing certain edges only at certain level of the epidemic is a simplistic model. In reality the network is constally evolving . We could immagine a network that evolve at each new time step, with evolution related to the travel limitation.
+
+With values propsed here is the cooresponding results.
+
+![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\limitation.png)
+
+Test and Isolation strategies: 
+
+Now we apply the isolation strategies decribed in senario N°1:
+
+We use the following code: 
+
+```r
+library(igraph)
+
+Erdos_Renyi_optimized <- function(n,p)
+{
+  nb_tri <- n*(n-1)/2
+  mat <- diag(0,nrow = n, ncol = n)
+  vect_rand <- runif(nb_tri , min = 0, max = 1) - p
+  for(i in 1:nb_tri)
+  {
+    if(vect_rand[i]>0)
+    {
+      vect_rand[i] <- 0 
+    }
+    else
+    {
+      vect_rand[i] <- 1 
+    }
+  }
+  mat[lower.tri(mat)] <- vect_rand
+  mat <- t(mat)
+  mat[lower.tri(mat)] <- vect_rand
+  igraph <- graph_from_adjacency_matrix(mat,mode = c("undirected"))
+  igraph
+}
+
+plot_epidemic_curves <- function(mat_res,time)
+{
+  #print(mat_res)
+  plot( x = c(0:time), y = mat_res[2,],xlab="days",ylab="Percentage of people",type="b",col="green", ylim=c(1,100),main="Evolution of SIR model epidemic")
+  lines(x= c(0:time), y = mat_res[3,],type="b",col="blue")
+  lines(x= c(0:time), y = mat_res[1,],type="b",col="red")
+  legend( ( time-(time*0.15) ), 90, legend=c("Suceptible", "Infected","Recovered"),
+          col=c("green","blue","red"), lty=1:3, cex=0.8)
+}
+
+epidemic_plot <- function(igraph,mainstr)
+{
+  nb_node <- vcount(igraph)
+  for(i in 1: nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(1,0,0) )
+    }
+    else if (node_status == "s" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,1,0) )
+    }
+    else if(node_status == "r" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,0,1) )
+    }
+    else{
+      print("BUG PLOT attribute")
+    }
+  }
+  for(i in 1: nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"i_time", i)
+    
+    if( node_status > 0 )
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, node_status  )
+    }else if( node_status == 0 )
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, "R"  )
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,0,1) )
+    }else
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, "S"  )
+    }
+  }
+  plot(igraph, main = mainstr )
+}
+
+is_unique <- function(vect)
+{
+  isunique <- TRUE
+  for(i in 1: length(vect))
+  {
+    iterator <- vect[i]
+    for(j in 1:length(vect))
+    {
+      if(j != i)
+      {
+        if(vect[j] == vect[i])
+        {
+          isunique <- FALSE
+        }
+      }
+    }
+  }
+  isunique
+}
+
+# The way we ensure uniqueness may be improuved with faster (and nicer) algorithm
+ensure_unique <- function(vect){
+  while(is_unique(vect) != TRUE)
+  {
+    for(i in 1: length(vect))
+    {
+      iterator <- vect[i]
+      for(j in 1:length(vect))
+      {
+        if(j != i)
+        {
+          if(iterator == vect[j] )
+          {
+            vect[j] <- floor(runif(1,min=1,max=length(vect)))
+          }
+        }
+      }
+    }
+  }
+  vect
+}
+
+init_epidemic <- function(igraph,n_0,n_d)
+{
+  nb_node <- vcount(igraph)
+  Infected_vect <- floor(runif(n_0,min=1,max=nb_node))
+  Infected_vect <- ensure_unique(Infected_vect)
+  
+  igraph <- set.vertex.attribute(igraph,"epidemic", value="s")
+  igraph <- set.vertex.attribute(igraph,"i_time", value = -1 )
+  for( i in 1 : n_0 )
+  {
+    igraph <- set.vertex.attribute(igraph,"epidemic", Infected_vect[i] ,value="i")
+    igraph <- set.vertex.attribute(igraph,"i_time", Infected_vect[i] ,value= n_d )
+  }
+  stat_days(igraph)
+  igraph
+}
+
+infected_heal <- function(igraph)
+{
+  nb_node <- vcount(igraph)
+  for( i in 1: nb_node)
+  {
+    node_time_status <- get.vertex.attribute(igraph,"i_time", i)
+    if( node_time_status > 0 )
+    {
+      igraph <- set.vertex.attribute(igraph,"i_time", i ,value= (node_time_status - 1) )
+    }
+    if( node_time_status == 1 )
+    {
+      #cat("Last day of infection ? \n")
+      igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="r")
+    }
+  }
+  igraph
+}
+
+transmission <- function(igraph,p_epidemic,n_d,vect_asymptomatic_people,false_negatives)
+{
+  igraph <- infected_heal(igraph)
+  nb_node <- vcount(igraph)
+  
+  adj_mat <- as_adjacency_matrix(igraph, type = c("both"))
+  
+  vect_i <- vector(mode = "numeric",nb_node)
+  vect_i_opo <- vector(mode = "numeric",nb_node)
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      vect_i[i] <- 1
+      vect_i_opo[i] <- 0
+    }
+    else
+    {
+      vect_i[i] <- 0
+      vect_i_opo[i] <- 1
+    }
+  }
+  
+  vect_r_op <- vector(mode = "numeric",nb_node)
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "r" )
+    {
+      vect_r_op[i] <- 0
+    }
+    else
+    {
+      vect_r_op[i] <- 1
+    }
+  }
+  
+  
+  neigbour_infected_vect <- adj_mat%*%vect_i
+  try_infect <- as.vector(neigbour_infected_vect)*vect_r_op*vect_i_opo
+  for(i in 1:nb_node)
+  {
+    if(try_infect[i] > 0 )
+    {
+      for(j in 1:try_infect[i] )
+      {
+        if(runif(1) < p_epidemic)
+        {
+          igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="i")
+          igraph <- set.vertex.attribute(igraph,"i_time", i ,value= n_d )
+          #cat("We inflect node NÂ°",i,"\n")
+        }
+      }
+    }
+  }
+  for(i in 1:nb_node)
+  {
+    if(try_infect[i] > 0 )
+    {
+      for(j in 1:try_infect[i] )
+      {
+        if(runif(1) < p_epidemic)
+        {
+          igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="i")
+          igraph <- set.vertex.attribute(igraph,"i_time", i ,value= n_d )
+          #cat("We inflect node NÂ°",i,"\n")
+        }
+      }
+    }
+  }
+  igraph <- positive_test(igraph,vect_asymptomatic_people,false_negatives)
+  igraph
+}
+
+positive_test <- function(igraph,vect_asymptomatic_people,false_negatives)
+{
+  nb_node <- vcount(igraph)
+  cat("Init = ",length(as_edgelist(igraph)),"\n")
+  adj_lst <- as_adj_list(igraph, mode = c("all"))
+  for(i in 1:nb_node)
+  {
+    itime <- get.vertex.attribute(igraph,"i_time", i )
+    if( (itime <= 5) && (itime > 0)  && ( runif(1) > false_negatives) && (vect_asymptomatic_people[i] == 0 ) )
+    {
+      igraph <- delete.edges(igraph,which(as_edgelist(igraph)==i,arr.ind=TRUE)[,1])
+    }
+  }
+  cat("AFTER  = ",length(as_edgelist(igraph)),"\n")
+  igraph
+}
+
+asymptomatic_people <- function(igraph,asymptomatic_proba){
+  nb_node <- vcount(igraph)
+  vect_asymptomatic_people <- vector(mode = "numeric",nb_node)
+  for( i in 1:nb_node )
+  {
+    if( runif(1) > asymptomatic_proba )
+    {
+      vect_asymptomatic_people[i] <- 0
+    }else{
+      vect_asymptomatic_people[i] <- 1
+    }
+  }
+  vect_asymptomatic_people
+}
+
+
+stat_days <- function(igraph)
+{
+  nb_node <- vcount(igraph)
+  tot_i <- 0
+  tot_s <- 0
+  tot_r <- 0
+  res <- vector(mode = "numeric")
+  for(i in 1:nb_node)
+  {
+    epi <- get.vertex.attribute(igraph,"epidemic", i )
+    if(epi == "i" )
+    {
+      tot_i <- tot_i + 1
+    }
+    if(epi == "s" )
+    {
+      tot_s <- tot_s + 1
+    }
+    if(epi == "r" )
+    {
+      tot_r <- tot_r + 1
+    }
+  }
+  res[1] <- tot_i
+  res[2] <- tot_s
+  res[3] <- tot_r
+  cat("Sucesptible: ",res[2]," Infected: ",res[1],"Recoverd: ",res[3],"\n")
+  res
+}
+
+simulation <- function(igraph,p_epidemic,n_d,time,confinement_high,confinement_low,restriction_percentages,travel_limitation,false_negatives,asymptomatic_proba)
+{
+  cat("Begin simulation \n")
+  init_graph <- igraph
+  mat_res <- matrix(ncol = time+1,nrow = 3 )
+  mat_res[,1 ] <- stat_days(igraph)
+  vect_asymptomatic_people <- asymptomatic_people(igraph,asymptomatic_proba)
+  if(travel_limitation == TRUE )
+  {
+    restrictions <- FALSE
+    for(i in 1:time )
+    {
+      strday <- c("Day N°",toString(i))
+      cat(strday,"\n")
+      igraph <- transmission(igraph,p_epidemic,n_d,vect_asymptomatic_people,false_negatives)
+      
+      if(restrictions == FALSE && confine_required(igraph,confinement_high,confinement_low,restrictions) == TRUE  )
+      {
+        cat("Day of limitations implemention\n")
+        igraph <- graph_with_restrictions(igraph,restriction_percentages)
+        restrictions <- TRUE
+      }
+      if(restrictions == TRUE && confine_required(igraph,confinement_high,confinement_low,restrictions) == FALSE  )
+      {
+        cat("Day of UNDO limitations implemention\n")
+        igraph <- undo_graph_with_restrictions(igraph,init_graph)
+        restrictions <- FALSE
+      }
+      restrans <- stat_days(igraph)
+      #epidemic_plot(igraph,strday)
+      mat_res[, (i+1) ] <- restrans
+    }
+  }else if(travel_limitation == FALSE ){
+    for(i in 1:time )
+    {
+      strday <- c("Day N°",toString(i))
+      cat(strday,"\n")
+      igraph <- transmission(igraph,p_epidemic,n_d,vect_asymptomatic_people,false_negatives)
+      restrans <- stat_days(igraph)
+      #epidemic_plot(igraph,strday)
+      mat_res[, (i+1) ] <- restrans
+    }
+  }
+  mat_res
+}
+
+# Dire que le graph devrait etre en constante évolution ce qui plus repésentatif de la réalité plutot que de revenir a un etat initial fixe..
+undo_graph_with_restrictions <- function(graph_now,graph_init){
+  nb_node <- vcount(graph_now)
+  for( i in 1: nb_node)
+  {
+    epi <- get.vertex.attribute(graph_now,"epidemic", i )
+    itime <- get.vertex.attribute(graph_now,"i_time", i )
+    graph_init <- set.vertex.attribute(graph_init,"epidemic", i ,value=epi)
+    graph_init <- set.vertex.attribute(graph_init,"i_time", i ,value=itime)
+  }
+  graph_init
+}
+
+graph_with_restrictions <- function(igraph,restriction_percentages){
+  edge_lst <- as_edgelist(igraph)
+  
+  delete_vect <- runif(nrow(edge_lst))
+  vect_bind <- vector(mode = "numeric",nrow(edge_lst))
+  for(i in nrow(edge_lst):1 )
+  {
+    if( delete_vect[i] > (restriction_percentages/100)  )
+    {
+      #edge_lst[i,3] <- 0
+      vect_bind[i] <- 0
+    }else{
+      vect_bind[i] <- 1
+      #edge_lst[i,3] <- 1
+    }
+  }
+  edge_lst <- cbind(edge_lst,vect_bind)
+  for(i in nrow(edge_lst):1 )
+  {
+    #cat("del? \t",i,"\t",edge_lst[i,3])
+    if(edge_lst[i,3] == 1)
+    {
+      #cat("We sup\n")
+      edge_lst <- edge_lst[-i,]
+    }else{
+      #cat("\n")
+    }
+    
+  }
+  edge_lst <- edge_lst[,-3]
+  limited_graph <- graph_from_edgelist(edge_lst, directed = FALSE)
+  
+  # cat("LIMITED ROW ",nrow(as_edgelist(limited_graph)),"Nbnode=",vcount(limited_graph) ,"\n")
+  # cat("UNLIMITED ROW ", nrow(as_edgelist(igraph)),"Nbnode=",vcount(limited_graph),"\n")
+  
+  nb_node <- vcount(igraph)
+  for( i in 1: nb_node)
+  {
+    epi <- get.vertex.attribute(igraph,"epidemic", i )
+    itime <- get.vertex.attribute(igraph,"i_time", i )
+    limited_graph <- set.vertex.attribute(limited_graph,"epidemic", i ,value=epi)
+    limited_graph <- set.vertex.attribute(limited_graph,"i_time", i ,value=itime)
+  }
+  
+  #vertex_attr(limited_graph) <- vertex_attr(igraph)
+  # cat("LIMITED ROW ",nrow(as_edgelist(limited_graph)),"Nbnode=",vcount(limited_graph) ,"\n")
+  # cat("UNLIMITED ROW ", nrow(as_edgelist(igraph)),"Nbnode=",vcount(limited_graph),"\n")
+  # print(vertex_attr(limited_graph))
+  # print("=====================")
+  # print(vertex_attr(igraph))
+  #epidemic_plot(igraph,"Unrestrited")
+  #epidemic_plot(igraph,"Restrited")
+  limited_graph
+}
+
+confine_required <- function(igraph,confinement_high,confinement_low,restrictions)
+{
+  nb_node <- vcount(igraph)
+  nb_i <- 0
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      nb_i <- nb_i+1
+    }
+  }
+  if(restrictions == FALSE)
+  {
+    if(nb_i > confinement_high)
+    {
+      restrictions <- TRUE
+    }
+  }else if( restrictions == TRUE )
+  {
+    if( nb_i < confinement_low )
+    {
+      restrictions <- FALSE
+    }
+  }
+  # cat("Nb of infected people:",nb_i,"\n")
+  # cat("Contact limitation ? ",restrictions,"\n")
+  restrictions
+}
+
+
+R0_calc <- function(result_mat,nb_node, n_d)
+{
+  nb_day <- ncol(result_mat)
+  gam <- 1/n_d
+  outmat <- matrix(nrow = 6, ncol = nb_day)
+  
+  x <- result_mat[1,]/nb_node
+  s <- result_mat[2,]/nb_node
+  r <- result_mat[3,]/nb_node
+  
+  d_x <- vector(mode = "numeric",nb_day)
+  d_s <- vector(mode = "numeric",nb_day)
+  d_r <- vector(mode = "numeric",nb_day)
+  beta <- vector(mode = "numeric",nb_day)
+  gamma <- vector(mode = "numeric",nb_day)
+  for(i in 2:nb_day )
+  {
+    d_x[i] <- x[i] - x[i-1]
+    d_s[i] <- s[i] - s[i-1]
+    d_r[i] <- r[i] - r[i-1]
+  }
+  for(i in 2:nb_day )
+  {
+    beta[i] <- d_s[i]/(s[i]*x[i])
+  }
+  print(beta/0.1)
+}
+
+n <- 2000
+p <- 0.01
+
+p_epidemic <- 0.01
+time <- 70
+
+n_0 <- 10
+n_d <- 10
+
+travel_limitation <- FALSE
+confinement_high <- 50
+confinement_low <- 10
+restriction_percentages <- 80
+
+
+false_negatives <- 0.2
+asymptomatic_proba <- 0.2
+
+ig <- Erdos_Renyi_optimized(n,p)
+cat("Erdos Renyi created\n")
+ig <- init_epidemic(ig,n_0,n_d)
+#epidemic_plot(ig,"Day One")
+cat("Infection initialized \n")
+res <- simulation(ig,p_epidemic,n_d,time,confinement_high,confinement_low,restriction_percentages,travel_limitation,false_negatives,asymptomatic_proba)
+plot_epidemic_curves(100*res/n,time)
+
+# transmis <- transmission(ig,p_epidemic,n_d)
+# epidemic_plot(transmis,"Day 2")
+# transmis <- transmission(transmis,p_epidemic,n_d)
+# epidemic_plot(transmis,"Day 3")
+#R0_calc(res,n,n_d)
+#res <- res*100/n
+#print(res)
+#plot_epidemic_curves(res,time)
+
+```
+
+![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\Test1.png)
+
+As expected the isolation of infected people reduce the maxium number of infected people, however the pic is still significant. The reason is maybe due to the fact that symptom only appear form the day N°5.
+
+How we apply the scenarios N°2 where the 10% of the whole population (randomly chosen each day) is tested every day. 
+
+Here is the code used : 
+
+```r$
+library(igraph)
+
+Erdos_Renyi_optimized <- function(n,p)
+{
+  nb_tri <- n*(n-1)/2
+  mat <- diag(0,nrow = n, ncol = n)
+  vect_rand <- runif(nb_tri , min = 0, max = 1) - p
+  for(i in 1:nb_tri)
+  {
+    if(vect_rand[i]>0)
+    {
+      vect_rand[i] <- 0 
+    }
+    else
+    {
+      vect_rand[i] <- 1 
+    }
+  }
+  mat[lower.tri(mat)] <- vect_rand
+  mat <- t(mat)
+  mat[lower.tri(mat)] <- vect_rand
+  igraph <- graph_from_adjacency_matrix(mat,mode = c("undirected"))
+  igraph
+}
+
+plot_epidemic_curves <- function(mat_res,time)
+{
+  #print(mat_res)
+  plot( x = c(0:time), y = mat_res[2,],xlab="days",ylab="Percentage of people",type="b",col="green", ylim=c(1,100),main="Evolution of SIR model epidemic")
+  lines(x= c(0:time), y = mat_res[3,],type="b",col="blue")
+  lines(x= c(0:time), y = mat_res[1,],type="b",col="red")
+  legend( ( time-(time*0.15) ), 90, legend=c("Suceptible", "Infected","Recovered"),
+          col=c("green","blue","red"), lty=1:3, cex=0.8)
+}
+
+epidemic_plot <- function(igraph,mainstr)
+{
+  nb_node <- vcount(igraph)
+  for(i in 1: nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(1,0,0) )
+    }
+    else if (node_status == "s" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,1,0) )
+    }
+    else if(node_status == "r" )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,0,1) )
+    }
+    else{
+      print("BUG PLOT attribute")
+    }
+  }
+  for(i in 1: nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"i_time", i)
+    
+    if( node_status > 0 )
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, node_status  )
+    }else if( node_status == 0 )
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, "R"  )
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0,0,1) )
+    }else
+    {
+      igraph <- set.vertex.attribute(igraph, "label", i, "S"  )
+    }
+  }
+  plot(igraph, main = mainstr )
+}
+
+is_unique <- function(vect)
+{
+  isunique <- TRUE
+  for(i in 1: length(vect))
+  {
+    iterator <- vect[i]
+    for(j in 1:length(vect))
+    {
+      if(j != i)
+      {
+        if(vect[j] == vect[i])
+        {
+          isunique <- FALSE
+        }
+      }
+    }
+  }
+  isunique
+}
+
+# The way we ensure uniqueness may be improuved with faster (and nicer) algorithm
+ensure_unique <- function(vect){
+  while(is_unique(vect) != TRUE)
+  {
+    for(i in 1: length(vect))
+    {
+      iterator <- vect[i]
+      for(j in 1:length(vect))
+      {
+        if(j != i)
+        {
+          if(iterator == vect[j] )
+          {
+            vect[j] <- floor(runif(1,min=1,max=length(vect)))
+          }
+        }
+      }
+    }
+  }
+  vect
+}
+
+init_epidemic <- function(igraph,n_0,n_d)
+{
+  nb_node <- vcount(igraph)
+  Infected_vect <- floor(runif(n_0,min=1,max=nb_node))
+  Infected_vect <- ensure_unique(Infected_vect)
+  
+  igraph <- set.vertex.attribute(igraph,"epidemic", value="s")
+  igraph <- set.vertex.attribute(igraph,"i_time", value = -1 )
+  for( i in 1 : n_0 )
+  {
+    igraph <- set.vertex.attribute(igraph,"epidemic", Infected_vect[i] ,value="i")
+    igraph <- set.vertex.attribute(igraph,"i_time", Infected_vect[i] ,value= n_d )
+  }
+  stat_days(igraph)
+  igraph
+}
+
+infected_heal <- function(igraph)
+{
+  nb_node <- vcount(igraph)
+  for( i in 1: nb_node)
+  {
+    node_time_status <- get.vertex.attribute(igraph,"i_time", i)
+    if( node_time_status > 0 )
+    {
+      igraph <- set.vertex.attribute(igraph,"i_time", i ,value= (node_time_status - 1) )
+    }
+    if( node_time_status == 1 )
+    {
+      #cat("Last day of infection ? \n")
+      igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="r")
+    }
+  }
+  igraph
+}
+
+transmission <- function(igraph,p_epidemic,n_d,false_negatives_before4,false_negatives_after4)
+{
+  igraph <- infected_heal(igraph)
+  nb_node <- vcount(igraph)
+  
+  adj_mat <- as_adjacency_matrix(igraph, type = c("both"))
+  
+  vect_i <- vector(mode = "numeric",nb_node)
+  vect_i_opo <- vector(mode = "numeric",nb_node)
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      vect_i[i] <- 1
+      vect_i_opo[i] <- 0
+    }
+    else
+    {
+      vect_i[i] <- 0
+      vect_i_opo[i] <- 1
+    }
+  }
+  
+  vect_r_op <- vector(mode = "numeric",nb_node)
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "r" )
+    {
+      vect_r_op[i] <- 0
+    }
+    else
+    {
+      vect_r_op[i] <- 1
+    }
+  }
+  
+  
+  neigbour_infected_vect <- adj_mat%*%vect_i
+  try_infect <- as.vector(neigbour_infected_vect)*vect_r_op*vect_i_opo
+  for(i in 1:nb_node)
+  {
+    if(try_infect[i] > 0 )
+    {
+      for(j in 1:try_infect[i] )
+      {
+        if(runif(1) < p_epidemic)
+        {
+          igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="i")
+          igraph <- set.vertex.attribute(igraph,"i_time", i ,value= n_d )
+          #cat("We inflect node NÂ°",i,"\n")
+        }
+      }
+    }
+  }
+  for(i in 1:nb_node)
+  {
+    if(try_infect[i] > 0 )
+    {
+      for(j in 1:try_infect[i] )
+      {
+        if(runif(1) < p_epidemic)
+        {
+          igraph <- set.vertex.attribute(igraph,"epidemic", i ,value="i")
+          igraph <- set.vertex.attribute(igraph,"i_time", i ,value= n_d )
+          #cat("We inflect node NÂ°",i,"\n")
+        }
+      }
+    }
+  }
+  igraph <- positive_test_whole_pop(igraph,false_negatives_before4,false_negatives_after4)
+  igraph
+}
+
+batch_to_test <- function(igraph){
+  nb_node <- vcount(igraph)
+  proportion_to_test <- 0.1
+  batch <- vector(mode = "numeric",nb_node)
+  for( i in 1:nb_node )
+  {
+    if( runif(1) > asymptomatic_proba )
+    {
+      batch[i] <- 0
+    }else{
+      batch[i] <- 1
+    }
+  }
+  batch
+}
+
+positive_test_whole_pop <- function(igraph,false_negatives_before4,false_negatives_after4)
+{
+  nb_node <- vcount(igraph)
+  batch <- batch_to_test(igraph)
+  cat("Init = ",length(as_edgelist(igraph)),"\n")
+  adj_lst <- as_adj_list(igraph, mode = c("all"))
+  for(i in 1:nb_node)
+  {
+    itime <- get.vertex.attribute(igraph,"i_time", i )
+    if( (itime <= 5) && (itime > 0)  && ( runif(1) > false_negatives_after4) && (batch[i] == 1 ) )
+    {
+      igraph <- delete.edges(igraph,which(as_edgelist(igraph)==i,arr.ind=TRUE)[,1])
+    }else if( (itime > 5) && ( runif(1) > false_negatives_before4 ) && (batch[i] == 1 ) ){
+      igraph <- delete.edges(igraph,which(as_edgelist(igraph)==i,arr.ind=TRUE)[,1])
+    }
+  }
+  cat("AFTER  = ",length(as_edgelist(igraph)),"\n")
+  igraph
+}
+
+
+stat_days <- function(igraph)
+{
+  nb_node <- vcount(igraph)
+  tot_i <- 0
+  tot_s <- 0
+  tot_r <- 0
+  res <- vector(mode = "numeric")
+  for(i in 1:nb_node)
+  {
+    epi <- get.vertex.attribute(igraph,"epidemic", i )
+    if(epi == "i" )
+    {
+      tot_i <- tot_i + 1
+    }
+    if(epi == "s" )
+    {
+      tot_s <- tot_s + 1
+    }
+    if(epi == "r" )
+    {
+      tot_r <- tot_r + 1
+    }
+  }
+  res[1] <- tot_i
+  res[2] <- tot_s
+  res[3] <- tot_r
+  cat("Sucesptible: ",res[2]," Infected: ",res[1],"Recoverd: ",res[3],"\n")
+  res
+}
+
+simulation <- function(igraph,p_epidemic,n_d,time,confinement_high,confinement_low,restriction_percentages,travel_limitation,false_negatives_before4,false_negatives_after4)
+{
+  cat("Begin simulation \n")
+  init_graph <- igraph
+  mat_res <- matrix(ncol = time+1,nrow = 3 )
+  mat_res[,1 ] <- stat_days(igraph)
+  if(travel_limitation == TRUE )
+  {
+    restrictions <- FALSE
+    for(i in 1:time )
+    {
+      strday <- c("Day N°",toString(i))
+      cat(strday,"\n")
+      igraph <- transmission(igraph,p_epidemic,n_d,false_negatives_before4,false_negatives_after4)
+      
+      if(restrictions == FALSE && confine_required(igraph,confinement_high,confinement_low,restrictions) == TRUE  )
+      {
+        cat("Day of limitations implemention\n")
+        igraph <- graph_with_restrictions(igraph,restriction_percentages)
+        restrictions <- TRUE
+      }
+      if(restrictions == TRUE && confine_required(igraph,confinement_high,confinement_low,restrictions) == FALSE  )
+      {
+        cat("Day of UNDO limitations implemention\n")
+        igraph <- undo_graph_with_restrictions(igraph,init_graph)
+        restrictions <- FALSE
+      }
+      restrans <- stat_days(igraph)
+      #epidemic_plot(igraph,strday)
+      mat_res[, (i+1) ] <- restrans
+    }
+  }else if(travel_limitation == FALSE ){
+    for(i in 1:time )
+    {
+      strday <- c("Day N°",toString(i))
+      cat(strday,"\n")
+      igraph <- transmission(igraph,p_epidemic,n_d,false_negatives_before4,false_negatives_after4)
+      restrans <- stat_days(igraph)
+      #epidemic_plot(igraph,strday)
+      mat_res[, (i+1) ] <- restrans
+    }
+  }
+  mat_res
+}
+
+# Dire que le graph devrait etre en constante évolution ce qui plus repésentatif de la réalité plutot que de revenir a un etat initial fixe..
+undo_graph_with_restrictions <- function(graph_now,graph_init){
+  nb_node <- vcount(graph_now)
+  for( i in 1: nb_node)
+  {
+    epi <- get.vertex.attribute(graph_now,"epidemic", i )
+    itime <- get.vertex.attribute(graph_now,"i_time", i )
+    graph_init <- set.vertex.attribute(graph_init,"epidemic", i ,value=epi)
+    graph_init <- set.vertex.attribute(graph_init,"i_time", i ,value=itime)
+  }
+  graph_init
+}
+
+graph_with_restrictions <- function(igraph,restriction_percentages){
+  edge_lst <- as_edgelist(igraph)
+  
+  delete_vect <- runif(nrow(edge_lst))
+  vect_bind <- vector(mode = "numeric",nrow(edge_lst))
+  for(i in nrow(edge_lst):1 )
+  {
+    if( delete_vect[i] > (restriction_percentages/100)  )
+    {
+      #edge_lst[i,3] <- 0
+      vect_bind[i] <- 0
+    }else{
+      vect_bind[i] <- 1
+      #edge_lst[i,3] <- 1
+    }
+  }
+  edge_lst <- cbind(edge_lst,vect_bind)
+  for(i in nrow(edge_lst):1 )
+  {
+    #cat("del? \t",i,"\t",edge_lst[i,3])
+    if(edge_lst[i,3] == 1)
+    {
+      #cat("We sup\n")
+      edge_lst <- edge_lst[-i,]
+    }else{
+      #cat("\n")
+    }
+    
+  }
+  edge_lst <- edge_lst[,-3]
+  limited_graph <- graph_from_edgelist(edge_lst, directed = FALSE)
+  
+  # cat("LIMITED ROW ",nrow(as_edgelist(limited_graph)),"Nbnode=",vcount(limited_graph) ,"\n")
+  # cat("UNLIMITED ROW ", nrow(as_edgelist(igraph)),"Nbnode=",vcount(limited_graph),"\n")
+  
+  nb_node <- vcount(igraph)
+  for( i in 1: nb_node)
+  {
+    epi <- get.vertex.attribute(igraph,"epidemic", i )
+    itime <- get.vertex.attribute(igraph,"i_time", i )
+    limited_graph <- set.vertex.attribute(limited_graph,"epidemic", i ,value=epi)
+    limited_graph <- set.vertex.attribute(limited_graph,"i_time", i ,value=itime)
+  }
+  
+  #vertex_attr(limited_graph) <- vertex_attr(igraph)
+  # cat("LIMITED ROW ",nrow(as_edgelist(limited_graph)),"Nbnode=",vcount(limited_graph) ,"\n")
+  # cat("UNLIMITED ROW ", nrow(as_edgelist(igraph)),"Nbnode=",vcount(limited_graph),"\n")
+  # print(vertex_attr(limited_graph))
+  # print("=====================")
+  # print(vertex_attr(igraph))
+  #epidemic_plot(igraph,"Unrestrited")
+  #epidemic_plot(igraph,"Restrited")
+  limited_graph
+}
+
+confine_required <- function(igraph,confinement_high,confinement_low,restrictions)
+{
+  nb_node <- vcount(igraph)
+  nb_i <- 0
+  for(i in 1:nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"epidemic", i)
+    if( node_status == "i" )
+    {
+      nb_i <- nb_i+1
+    }
+  }
+  if(restrictions == FALSE)
+  {
+    if(nb_i > confinement_high)
+    {
+      restrictions <- TRUE
+    }
+  }else if( restrictions == TRUE )
+  {
+    if( nb_i < confinement_low )
+    {
+      restrictions <- FALSE
+    }
+  }
+  # cat("Nb of infected people:",nb_i,"\n")
+  # cat("Contact limitation ? ",restrictions,"\n")
+  restrictions
+}
+
+
+R0_calc <- function(result_mat,nb_node, n_d)
+{
+  nb_day <- ncol(result_mat)
+  gam <- 1/n_d
+  outmat <- matrix(nrow = 6, ncol = nb_day)
+  
+  x <- result_mat[1,]/nb_node
+  s <- result_mat[2,]/nb_node
+  r <- result_mat[3,]/nb_node
+  
+  d_x <- vector(mode = "numeric",nb_day)
+  d_s <- vector(mode = "numeric",nb_day)
+  d_r <- vector(mode = "numeric",nb_day)
+  beta <- vector(mode = "numeric",nb_day)
+  gamma <- vector(mode = "numeric",nb_day)
+  for(i in 2:nb_day )
+  {
+    d_x[i] <- x[i] - x[i-1]
+    d_s[i] <- s[i] - s[i-1]
+    d_r[i] <- r[i] - r[i-1]
+  }
+  for(i in 2:nb_day )
+  {
+    beta[i] <- d_s[i]/(s[i]*x[i])
+  }
+  print(beta/0.1)
+}
+
+n <- 2000
+p <- 0.01
+
+p_epidemic <- 0.01
+time <- 70
+
+n_0 <- 10
+n_d <- 10
+
+travel_limitation <- FALSE
+confinement_high <- 50
+confinement_low <- 10
+restriction_percentages <- 80
+
+
+false_negatives_before4 <- 0.6
+false_negatives_after4 <- .2
+asymptomatic_proba <- 0.2
+
+ig <- Erdos_Renyi_optimized(n,p)
+cat("Erdos Renyi created\n")
+ig <- init_epidemic(ig,n_0,n_d)
+#epidemic_plot(ig,"Day One")
+cat("Infection initialized \n")
+res <- simulation(ig,p_epidemic,n_d,time,confinement_high,confinement_low,restriction_percentages,travel_limitation,false_negatives_before4,false_negatives_after4)
+plot_epidemic_curves(100*res/n,time)
+
+# transmis <- transmission(ig,p_epidemic,n_d)
+# epidemic_plot(transmis,"Day 2")
+# transmis <- transmission(transmis,p_epidemic,n_d)
+# epidemic_plot(transmis,"Day 3")
+#R0_calc(res,n,n_d)
+#res <- res*100/n
+#print(res)
+#plot_epidemic_curves(res,time)
+
+```
+
+ And the unexpreced results : 
+
+![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\test_everybpody.png)
+
+The scenario N°2 seem more performant than to test only symptomatic people.
+
+Project
+
+For the project about the voter model we will use some indicator based on real data.
+We will also new faster voter model based on a scale free graph.
+
+First we will load some date about age repartition of the french population.
+Here is the source of data : https://www.census.gov/data/tables/time-series/demo/popest/2010s-national-detail.html#par_textimage_1537638156
+This how you can load .cvs files.
+```r
+
 ```
