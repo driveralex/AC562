@@ -4,7 +4,11 @@
 
 *Alexandre Tisserand*
 
-15/01/2021
+15/03/2021
+
+[TOC]
+
+
 
 ## TP1
 
@@ -18,6 +22,7 @@ The aim of this TP is to rise in competence with graph representations, metrics 
 
 A graph may be represented by its adjacency matrix or its adjacency list.
 Below is a function that gets the adjacency list from the adjacency matrix :
+
 ```r
 fromMatriceToList <- function(mat)
 {
@@ -91,7 +96,7 @@ listOfDegrees <- function(input)
   lst
 }
 ```
-Here is a function which return the degrees distribution from the adjacency list ( a vérifier et posser une question quand a la définition de la question)
+Here is a function which return the degrees distribution from the adjacency list.
 ```r
 degreeDistribution <- function(input)
 {
@@ -112,9 +117,7 @@ degreeDistribution <- function(input)
 
 3. Clustering coefficient
 
-Faire ici un rappel de ce qu'est le clustering coef.. (maybe donner la def cc(i) = ...)
-
-Here is a function that retruns the list of cluster coefficients from the adjacency matrix.
+Here is a function that return the list of cluster coefficients from the adjacency matrix.
 ```r
 clustering_coef <- function(input)
 {
@@ -136,29 +139,29 @@ clustering_coef <- function(input)
 }
 ```
 
-### 3. Breadth-first search algorithm and applications
+### 3) Breadth-first search algorithm and applications
 
 1/
 
-Reminder : Breadth-first search algorithm give the distance between a given node to all the other node belonging to the same component.
+Reminder: Breadth-first search algorithm give the distance between a given node to all the other node belonging to the same component.
 
-The first implementation we use is "navie" and use the folloing principles :
+The first implementation we use is "naive" and use the following principles:
 
 Let n = number of nodes.
 Let m = number of edges.
 Let i = studied node.
-Let s = desitination node.
-Let d = number of round.
+Let s = destination node.
+Let d = number of rounds.
 
-1/ Creation of an array Ds of n intergers to store the distances d(i,s). 
-2/Initialisation of Ds with Ds(s)=0 and Ds(i) = -1, **quelque soit** i=!s. d=0.
+1/ Creation of an array $D_{s}$ of $n$ integers to store the distances $d(i,s)$. 
+2/ Initialization of $D_{s}$ with Ds(s)=0 and Ds(i) = -1, **quelque soit** i=!s. d=0.
 3/ Find all nodes with distance d. If there is no, then stop.
 4/ Find the neighbors of these nodes, assign those neighbors which don’t have a distance yet, with the distance d + 1.
 5/ Set d = d + 1 and go to 3.
 
 
 
-Bellow is a R implementation:
+Below is a R implementation:
 ```r
 breadth_first <- function(input_mat,node)
 {
@@ -236,10 +239,10 @@ areneighbours <- function(input,i,j)
 }
 ```
 
-The way we implement this could be better executed (notably the with the areneighbours) but with this algorithm, for a typical network, complexity is O(m + n log n).
+The way we implement this could be better executed (notably the with the areneighbours) but with this algorithm, for a typical network, complexity is $O(m + n *log(n))$.
 
 A better implementation could be done with using a queue.
-Here is a implementation with the stack algorithm : 
+Here is a implementation with the stack algorithm:
 
 ```r
 breadth_first_stack <- function(input_mat,node)
@@ -277,9 +280,9 @@ breadth_first_stack <- function(input_mat,node)
   ds
 }
 ```
-With the stack approch the complexity is samller. O(m + n)
+With the stack approach the complexity is smaller. $O(m + n)$
 
-For this tow apporch we have the result of a unique node. To have the complete matrice of distance as required in Q1, we repeat the operation for all nodes and aggregate the outputs. This is the purpose of the mat_D_breadth_first_stack function using the stack algorithm. 
+For this tow approach we have the result of a unique node. To have the complete matrices of distance as required in Q1, we repeat the operation for all nodes and aggregate the outputs. This is the purpose of the mat_D_breadth_first_stack function using the stack algorithm. 
 
 ```r
 mat_D_breadth_first_stack <- function(input_mat)
@@ -299,6 +302,7 @@ mat_D_breadth_first_stack <- function(input_mat)
 For Question N°2: 
 Diameter is a record of the largest distance observed in a component.
 Once the Breadth-first search executed, finding the diameter for a given node is straightforward.
+
 ```r
 diammeter <- function(input_mat,node)
 {
@@ -325,9 +329,9 @@ diammeter <- function(input_mat,node)
 }
 ```
 3/
-Closeness centrality represente
+Closeness centrality represent
 
-First we have to underline that if the network is not composed of a single unique component, the result of the closeness centrality must be take with care. It is possible to handle each component individualy, but this can bias the values. Indeed nodes in smaller component may have higher value. This is what the following example do:
+First, we have to underline that if the network is not composed of a single unique component, the result of the closeness centrality must be taken with care. It is possible to handle each component individually, but this can bias the values. Indeed, nodes in smaller component may have higher value. This is what the following example do:
 
 ```r
 closeness_centrality_node <- function( input_mat , node ) 
@@ -346,7 +350,7 @@ closeness_centrality_node <- function( input_mat , node )
   output
 }
 ```
-We use the very unelegant (but functional) breadth_first_stack_list function described bellow.
+We use the very inelegant (but functional) breadth_first_stack_list function described below.
 
 ```r
 breadth_first_stack_list <- function(input_mat,node)
@@ -365,25 +369,26 @@ breadth_first_stack_list <- function(input_mat,node)
 }
 ```
 
-The igraph package throw a waring when the components are not all linked togethers.
+The igraph package throw a waring when the components are not all linked together.
 
 4/ Implementing the Betweennes centrality was for the hardest task to complete. In fact finding all the shortest path is the blocking point.
 I tried to do this job with a recusive function knowing the lenght of every shortest path with a previous breadfirst search. 
 Unfortunately I did not maneged to make this function work. The following programm visit all the nodes, but returning the target point and aggregate the coresting path is not so easy.
 
-### 4. With the package Igraph
+### 4) With the package Igraph
 
-First you need to download the igraph libray via the R packet manager: 
+First you need to download the igraph library via the R packet manager: 
 ```r 
 install.packages("igraph")
 ```
-Then load the package at the beging of the script
+Then load the package at the begging of the script
 ```r
 library(igraph)
 ```
 
 1/ 
-The function undirectedIgraphFromAdjancyMatrix that defines an undirected graph in Igraph from an adjacency matrix.
+The function undirectedIgraphFromAdjancyMatrix defines an undirected graph in Igraph from an adjacency matrix.
+
 ```r
 undirectedIgraphFromAdjancyMatrix <- function(input_mat)
 {
@@ -427,6 +432,7 @@ directedIgraphFromAdjancyMatrix <- function(input_mat)
 
 2/ 
 Using igraph you can have **degree** with
+
 ```r
 igraphdegrees <- function(igraph)
 {
@@ -436,7 +442,10 @@ igraphdegrees <- function(igraph)
 
 The **global clustering coefficient** : 
 
-latex : C :=number of triangles * 3 / number of connected triples
+$$
+C := \frac{number\ of\ triangles * 3}{number\ of\ connected\ triples}
+$$
+
 
 ```r
 global_clustering_coefficients <- function(igraph)    
@@ -446,8 +455,9 @@ global_clustering_coefficients <- function(igraph)
 ```
 
 **Local clustering coefficient** for a given node. 
-
-Reminder of the formula : Latex ! => Ci := number of pairs of neighbors of i that are connected/number of pairs of neighbors of i
+$$
+C_{i} := \frac{number\ of \ pairs \ of\ neighbors\ of\ i\ that\ are\ connected}{number\ of\ pairs\ of\ neighbors\ of\ i}
+$$
 
 ```r
 local_clustering_coefficient <- function(igraph,node)
@@ -472,16 +482,16 @@ igraph_betweenness_centrality_node <- function(input_mat,node)
   betweenness(igraph,normalized = FALSE)[node]
 }
 ```
-In the next section we will compare the results of the igraph function and the function we made.
 
-TO BE COMPLETED ..........
 
-3/ It's possible the change the color of the node acordingly to there caratecistic. 
+3/ It's possible the change the color of the node accordingly to their characteristic.
 
 **Color**
 
-To determine the color of a node we use a linear repartition of atribute with rgb color.
-You can use a color of refernce like the one used in the exemple: esisar's purple color.
+To determine the color of a node we use a linear repartition of attribute with rgb color.
+
+You can use a color of reference like the one used in the example: Esisar's purple color.
+
 ```r
 inputcolor.R <- 146
 inputcolor.G <- 39
@@ -497,7 +507,7 @@ findcolor <- function(input_val,low_val, high_val,inputcolor )
 }
 ```
 
-The we just have to mofify the vertex attribute. 
+The we just have to modify the vertex attribute. 
 
 ```r
 colorgraph <- function(igraph,inputcolor,inputtype)
@@ -548,7 +558,7 @@ colorgraph <- function(igraph,inputcolor,inputtype)
 
 **Size**
 
-The process to modify the node size is almost the same as for color. We have replace the input color by a size coeficient to change the scale of ploting.
+The process to modify the node size is almost the same as for color. We have replace the input color by a size coefficient to change the scale of plotting.
 
 ```r
 findsize <- function(input_val,low_val, high_val, sizeCoef )
@@ -609,20 +619,20 @@ sizegraph <- function(igraph,inputtype,sizeCoef)
 }
 ```
 
-Those function can be perforemed more efficiantly.
+Those functions can be performed more efficiently.
 
 ## TP2
 
 ### 1) Introduction
 
-TP2 is focused on creation of undirected random graph model. Once the model builded, we uses metrics to extract some of there caracteristiques.
+TP2 is focused on creation of undirected random graph model. Once the model build, we use metrics to extract some of their characteristic.
 
 ### 2) Erdos-Renyi model
 
-The Graph Erdos-Renyi G(n, p) = (V,E) constructed from a set V of n vertices.
-The edge between 2 vertices i and j exists with probability p.
+The Graph Erdos-Renyi $G(n, p) = (V,E)$ constructed from a set $V$ of $n$ vertices.
+The edge between 2 vertices $i$ and $j$ exists with probability $p$.
 
-Below is a propostion of algorthiym :
+Below is a proposition of algorithm:
 
 ```r
 Erdos_Renyi <- function(n,p)
@@ -643,10 +653,11 @@ Erdos_Renyi <- function(n,p)
 }
 ```
 
-This implementation give the right output. Hoever due to the 2 for loop performance is quite bad and it can take sevral minutes with large graph. 
+This implementation gives the right output. However due to the 2 for loop performance is quite bad and it can take several minutes with large graph. 
 
-A faster implementation is porposed below with approch closer to adjency matrix.
-Note the transpose trick used to make the matrix symetric.
+A faster implementation is proposed below with approach closer to adjacency matrix.
+
+Note the transpose trick used to make the matrix symmetric.
 
 ```r
 Erdos_Renyi_optimized <- function(n,p)
@@ -673,13 +684,12 @@ Erdos_Renyi_optimized <- function(n,p)
 }
 ```
 
-Dire quelques mots sur la distribution de type poisons
-
 ### 3) Watts-Strogatz model : Small world network
 
 The Watts–Strogatz model produces graphs with small-world properties.
 
-During the implementation of this algotium the first version created completed the task enficiently but was very slow ( multiple minutes for n=1000 ) due to the cascade of for loops.
+During the implementation of this algorithm the first version created completed the task efficiently but was very slow (multiple minutes for n=1000) due to the cascade of for loops.
+
 After rewriting the r code here is implementation that perform well and can produce the required the task quasi instantly.
 
 ```r
@@ -742,7 +752,7 @@ Watts_Strogatz_opt <- function(n,p,m)
 
 ### 4) Graph scale free
 
-The following code genrate a scale free graph for any type of k.
+The following code generate a scale free graph for any type of k.
 
 ```r
 nb_init_nodes <- function(nb_init_edges)
@@ -806,11 +816,11 @@ scale_free <- function(n,k,q)
 ```
 ### 5) Histograms of the degree distribution.
 
-First we will generate diffrents grap with the previous functions: 
+First, we will generate different graphs with the previous functions: 
 
-- Erdos-Renyi with 1000 nodes and diferent values of the probability p from 0 to 1 with a step of 0.05.
+\- Erdos-Renyi with 1000 nodes and different values of the probability p from 0 to 1 with a step of 0.05.
 
-To do this we use the folling code: 
+To do this we use the following code:
 
 ```r
 generate_ER <- function(n)
@@ -859,7 +869,7 @@ generate_ER <- function(n)
   draw_histo(lst,xmax)
 }
 ```
-We notice the Poisson distribution with the diffent probability.
+We notice the Poisson distribution with the differentprobability.
 
 - Watts-Strogatz of size n = 1000 with p = 0.1 and m = 2.
 ```r
@@ -876,11 +886,11 @@ Watts_histo <- function(igraph)
 }
 ```
 
-[ PUT ONE IMG]
+![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\watts_histo.png)
 
 - A scale free of size n = 1000 with k = 3 and q = 2.
 
-For this scale free we have added a power law in comparaison to verify this law.
+For this scale free we have added a power law in comparison to verify this law.
 
 ```r
 customhisto <- function(igraph)
@@ -919,15 +929,13 @@ powerlaw <- function(hsacle,nbpt)
   mat
 }
 ```
-[ PUT ONE IMG]
+![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\histo_degree_scalefree.png)
 
 ### 6) Scale free, power law degree distribution
 
-To show more the distribution of degree in scale free graph follow power law of type  P(k) ~k^-a.
+To show more the distribution of degree in scale free graph follow power law of type  $P(k)  \sim k^{-a}$
 
-We used a cumulative distribution visualisation with the fllowing code 
-
-[PUT FORMULA if we have time]
+We used a cumulative distribution visualization with the following code:
 
 ```r
 sortdeg <- function(igraph)
@@ -965,15 +973,20 @@ sortdeg <- function(igraph)
   # We may have pb with k = 2.. 
 }
 ```
-[PUT ONE IMG]
+
+
+![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\Cumulative.png)
 
 ### 7) Erdos-Renyi , average length as function of p
 
-To calculate the avreage lenght with the following formula.
+To calculate the average length with the following formula:
 
-[ PUT FORMULA ]
+$$
+l = \frac{2}{n(n-1)}\sum_{1\leq i < j \leq n } d(i,j)
+$$
 
-We use the follwing code : 
+
+We use the following code : 
 
 ```r
 average_length <- function(igraph)
@@ -1001,7 +1014,7 @@ average_length <- function(igraph)
   l <- 2*sum/( (vcount(igraph)*( vcount(igraph) -1 ))  )
 }
 ```
-The evolution of the average length with p is ploted with the folling code : 
+The evolution of the average length with p is plotted with the following code : 
 
 ```r
 p_average_length <- function(nb_nodes,nb_sample)
@@ -1029,11 +1042,11 @@ p_average_length <- function(nb_nodes,nb_sample)
 }
 ```
 
-[PUT ONE IMG]
+![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\p_average_length.png)
 
 ### 8) Erdos-Renyi, clustering coefficient as functions of p
 
-The same pinciple is applyed for evolution of the global clustering coefficient. 
+The same principle is applied for evolution of the global clustering coefficient.
 
 ```r
 p_clustering_coef <- function(nb_nodes,nb_sample)
@@ -1060,8 +1073,7 @@ p_clustering_coef <- function(nb_nodes,nb_sample)
   )
 }
 ```
-
-[PUT ONE IMG]
+![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\clustering_coef.png)
 
 ## TP3
 
@@ -1201,9 +1213,9 @@ simulation <- function(igraph,noise,time)
   mat
 }
 ```
-Then you just have to give the network of you choice to the simulation and you will have complete matrix that repesente the evolution of votes.
+Then you just have to give the network of your choice to the simulation and you have completed the matrix that represent the evolution of votes.
 
-Before the developpement of this implementation of a dynamic model I have build an other model witch is way less time-efficient.
+Before the development of this implementation of a dynamic model I have built another model, which is way less time-efficient.
 Here is the code:
 ```r
 probability_node <- function(igraph, node)
@@ -1301,36 +1313,36 @@ simulation <- function(igraph,noise,time)
   mat
 }
 ```
+Notice the difference introduce by working with matrix in comparison with for loops.
 
-Notice the diffrence intoduce by working with matrix in comparaison with for loops.
-
-The evolution of the voting rate can be repsented via the output matrix, however this data still need to be simplifyed in order to be more human readable. Here the role of the declare winner function is to inform us about the winner if the vote is done at the end of the simulation.
+The evolution of the voting rate can be represented via the output matrix; however, this data still needs to be simplified to be more human readable. Here the role of the declare winner function is to inform us about the winner if the vote is done at the end of the simulation.
 
 ### 3) Influenceing scenarios
 
-With a scale free graph of 501 nodes( to avoid Deuce), k = 3, m = 2, and for simulation of 0.01 noise and time = 3000, we will try to influence the vote.
+With a scale free graph of 501 nodes (to avoid Deuce), k = 3, m = 2, and for simulation of 0.01 noise and time = 3000, we will try to influence the vote.
 We will work in Jerry's Team.
 
 #### a) Scenario A
 
-We have the possibiliy convince 10 people to vote for Jerry. We will use the metrics to identify them.
+We have the possibility convince 10 people to vote for Jerry. We will use the metrics to identify them.
 
-We want to have :
+We want to have:
 
-  - Node connected to the giant conponent.
-  - Node with a samll lenght to all the others nodes.
-  - Node with high closness centrality.
+  - Node connected to the giant component.
+  - Node with a small length to all the others nodes.
+  - Node with high closeness centrality.
 
-Functions n_length, reacheable_node and how_closness are used to identify nodes with an high influence.
+Functions n_length, reacheable_node and how_closness are used to identify nodes with a high influence.
 
-On the other side we have to take in consideration the limitation on the sum of degree of 100.
-First we use the how_bad_is_degree function. Then the function high_cut also play a role to eliminate the nodes with highest degree with a non linerar function.
+On the other side we must take in consideration the limitation on the sum of degree of 100.
+First, we use the how_bad_is_degree function. Then the function high_cut also play a role to eliminate the nodes with highest degree with a nonlinear function.
 
-All thoses paramter can be tuned by hand with coefficient in order to impouve the ranking.
+All those parameters can be tuned by hand with coefficient to improve the ranking.
 
 Then to ensure that we do respect the degree condition we cycle down the top result until the condition is respected.
 
 Here is the code to do the selection of node to influence:
+
 ```r
 selection <- function(igraph)
 {
@@ -1468,7 +1480,8 @@ n_length <- function(igraph)
 }
 ```
 
-Then the set node chossen is tested in simulation, with they vote force to 1. To ensure that that the our methods is ok we repeat simulation multiple time and observe the result. Bellow is the code to test the model.
+Then the set node chosen is tested in simulation, with they vote force to 1. To ensure that that our methods is ok we repeat simulation multiple time and observe the result. Below is the code to test the model.
+
 ```r
 initVoteBernoulli <- function(igraph,sway_vector)
 {
@@ -1624,7 +1637,7 @@ initZelot <- function(igraph,zelot_vector)
   igraph
 }
 ```
-The voting function are adapted:
+The voting function is adapted:
 ```r
 initVoteBernoulli <- function(igraph,sway_vector,zelot_vector)
 {
@@ -1701,7 +1714,7 @@ vote <- function(igraph,noise,N_vect,sway_vector,zelot_vector)
 
 ```
 
-Then as for the others parameters we remouve them from the ranking with the following trick: 
+Then as for the others parameters we remove them from the ranking with the following trick: 
 
 ```r
 is_zelot <- function(igraph)
@@ -1805,20 +1818,19 @@ cat("TOM win in ",winner/nb_simu,"%\n")
 cat("Avreage score is",score/nb_simu,"%\n")
 ```
 
-With the zealot the effect of the 10 influenced node seem increassed.
+With the zealot the effect of the 10 influenced nodes seem increassed.
 
 #### c) Effect of remouving node.
 
-As for the nodes, we can influence the network by changing its topology. However, finding the edges to remouve might be more complicated that for nodes in the voter model. Because my proposition of node influencing did not work well, and limitation in time to execute this function: I will not implement it.
+As for the nodes, we can influence the network by changing its topology. However, finding the edges to remove  might be more complicated that for nodes in the voter model. Because my proposition of node influencing did not work well, and limitation in time to execute this function: I will not implement it.
 
 ## TP4
 
-The fourth practical is about epidemic models. We will implement a SIR (Susceptible, Infectious, Recovered) model. 
+The fourth practical is about epidemic models. We will implement an SIR (Susceptible, Infectious, Recovered) model.
 
-### 1 R implementation
+### 1) R implementation
 
-Below you will find a function that simulate the spread of the epidemic in a SIR meodel. The evolution of the number of Suceptible, Infected and Recovered can be representated as a function of the time:
-
+Below you will find a function that simulate the spread of the epidemic in an SIR model. The evolution of the number of Susceptible, Infected and Recovered can be represented as a function of the time:
 ```r
 library(igraph)
 
@@ -2012,7 +2024,6 @@ transmission <- function(igraph,p_epidemic,n_d)
     }
   }
 
- 
   neigbour_infected_vect <- adj_mat%*%vect_i
   try_infect <- as.vector(neigbour_infected_vect)*vect_r_op*vect_i_opo
   for(i in 1:nb_node)
@@ -2221,7 +2232,6 @@ confine_required <- function(igraph,confinement_high,confinement_low,restriction
   restrictions
 }
 
-
 R0_calc <- function(result_mat,nb_node, n_d)
 {
   nb_day <- ncol(result_mat)
@@ -2273,7 +2283,6 @@ ig <- init_epidemic(ig,n_0,n_d)
 cat("Infection initialized \n")
 res <- simulation(ig,p_epidemic,n_d,time,confinement_high,confinement_low,restriction_percentages,travel_limitation)
 plot_epidemic_curves(100*res/n,time)
-
 ```
 
 Here is the output of this simulation: 
@@ -2292,7 +2301,7 @@ $$
 \right.
 $$
 
-To solve this model we have used the following code inspired by the http://rstudio-pubs-static.s3.amazonaws.com/6852_c59c5a2e8ea3456abbeb017185de603e.html
+To solve this model, we have used the following code inspired by `http://rstudio-pubs-static.s3.amazonaws.com/6852_c59c5a2e8ea3456abbeb017185de603e.html`
 
 ```r
 ## Load deSolve package
@@ -2342,7 +2351,7 @@ legend(40, 0.7, c("Susceptible", "Infected", "Recovered"), pch = 1, col = 2:4, b
 
 ![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\solver.png)
 
-Notice the general behaving is simillar.
+Notice the general behaving is similar.
 
 Then we can adjust beta and gamma to be closer of our simulation.
 
@@ -2352,10 +2361,9 @@ R_{0}={\frac {\beta }{\gamma }}
 $$
 
 
+### 2) Effect of confine people
 
-### 5 Effect of confine people
-
-Now we will add rule to limit social links of people. We are trying to simulate the effect of confinement or curfew. The modelisation we use is a reduction of the number of edges under certain conditions. The following code simulate this behaving.
+Now we will add rule to limit social links of people. We are trying to simulate the effect of confinement or curfew. The modulization we use is a reduction of the number of edges under certain conditions. The following code simulate this behaving.
 
 ```r
 library(igraph)
@@ -2746,7 +2754,6 @@ confine_required <- function(igraph,confinement_high,confinement_low,restriction
   restrictions
 }
 
-
 R0_calc <- function(result_mat,nb_node, n_d)
 {
   nb_day <- ncol(result_mat)
@@ -2796,18 +2803,17 @@ cat("Infection initialized \n")
 res <- simulation(ig,p_epidemic,n_d,time,confinement_high,confinement_low,restriction_percentages)
 plot_epidemic_curves(100*res/n,time)
 ```
-Notice that removing certain edges only at certain level of the epidemic is a simplistic model. In reality the network is constally evolving . We could immagine a network that evolve at each new time step, with evolution related to the travel limitation.
+Notice that removing certain edges only at certain level of the epidemic is a simplistic model. In reality the network is constantly evolving. We could imagine a network that evolve at each new time step, with evolution related to the travel limitation.
 
-With values propsed here is the cooresponding results.
+With values proposed here is the corresponding results.
 
 ![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\limitation.png)
 
-Test and Isolation strategies: 
+### 3) Test and Isolation strategies: 
 
-Now we apply the isolation strategies decribed in senario N°1:
+Now we apply the isolation strategies described in scenario N°1:
 
-We use the following code: 
-
+We use the following code:
 ```r
 library(igraph)
 
@@ -3315,11 +3321,11 @@ plot_epidemic_curves(100*res/n,time)
 
 As expected the isolation of infected people reduce the maxium number of infected people, however the pic is still significant. The reason is maybe due to the fact that symptom only appear form the day N°5.
 
-How we apply the scenarios N°2 where the 10% of the whole population (randomly chosen each day) is tested every day. 
+How we apply the scenarios N°2 where the 10% of the whole population (randomly chosen each day) is tested every day.
 
-Here is the code used : 
+Here is the code used :
 
-```r$
+```r
 library(igraph)
 
 Erdos_Renyi_optimized <- function(n,p)
@@ -3512,7 +3518,6 @@ transmission <- function(igraph,p_epidemic,n_d,false_negatives_before4,false_neg
     }
   }
   
-  
   neigbour_infected_vect <- adj_mat%*%vect_i
   try_infect <- as.vector(neigbour_infected_vect)*vect_r_op*vect_i_opo
   for(i in 1:nb_node)
@@ -3584,7 +3589,6 @@ positive_test_whole_pop <- function(igraph,false_negatives_before4,false_negativ
   cat("AFTER  = ",length(as_edgelist(igraph)),"\n")
   igraph
 }
-
 
 stat_days <- function(igraph)
 {
@@ -3825,21 +3829,172 @@ plot_epidemic_curves(100*res/n,time)
 #plot_epidemic_curves(res,time)
 
 ```
-
- And the unexpreced results : 
+And the unexpected results: 
 
 ![](C:\Users\SESA458137\OneDrive - Schneider Electric\Travail\ESISAR\S6\AC 562 Complex Systems\Repo\AC562\R md test\test_everybpody.png)
 
 The scenario N°2 seem more performant than to test only symptomatic people.
 
-Project
+## Project
 
-For the project about the voter model we will use some indicator based on real data.
-We will also new faster voter model based on a scale free graph.
+For the project about the voter model we will use some indicators based on real data.
+We will also use a new faster voter model based on a scale free graph.
+```r
+initVoteBernoulli <- function(igraph)
+{
+  for( i in 1: vcount(igraph))
+  {
+    if( runif(1) < 1/2 )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=1)
+    }
+    else
+    {
+      igraph <- set.vertex.attribute(igraph,"vote", i ,value=0)
+    }
+  }
+  igraph
+}
 
-First we will load some date about age repartition of the french population.
+vote <- function(igraph,noise,N_vect)
+{
+  nb_node <- vcount(igraph)
+  vect_influence <- vector(mode = "numeric",nb_node)
+  vect_nb_neighb <- vector(mode = "numeric",nb_node)
+  f_p <-  vector(mode = "numeric",nb_node)
+  
+  adj_mat <- as_adjacency_matrix(igraph)
+  vect_vote <- get.vertex.attribute(igraph,"vote")
+  for(i in 1: nb_node)
+  {
+    vect_influence[i] <-  vect_vote%*%adj_mat[i,]
+    vect_nb_neighb[i] <- sum(adj_mat[i,])
+    
+    if(vect_nb_neighb[i] == 0)
+    {
+      f_p[i] <- vect_vote[i]
+    }else{
+      f_p[i] <- (1-2*noise)*(vect_influence[i]/vect_nb_neighb[i])+noise
+    }
+    
+    if( f_p[i] > 0.5 )
+    {
+      igraph <- set.vertex.attribute(igraph,"vote",i,value = 1)
+    }else{
+      igraph <- set.vertex.attribute(igraph,"vote",i,value = 0)
+    }
+  }
+  igraph
+}
+
+declare_winner <- function(mat)
+{
+  end_vote_vect <- mat[,ncol(mat)]
+  
+  if( sum(end_vote_vect)/nrow(mat) == 0.5  )
+  {
+    cat("Deuce\n")
+  }else if( sum(end_vote_vect)/nrow(mat) < 0.5 )
+  {
+    cat("Jerry win\n")
+  }else if( sum(end_vote_vect)/nrow(mat) > 0.5 )
+  {
+    cat("Tom win\n")
+  }
+}
+
+simulation <- function(igraph,noise,time)
+{
+  igraph <- initVoteBernoulli(igraph)
+  vote_plot(igraph,"Init")
+  mat <- vector(mode = "numeric",(vcount(igraph)*time))
+  dim(mat) <- c(vcount(igraph),time)
+  for(i in 1: time)
+  {
+    igraph <- vote(igraph,noise)
+    cat(i," over ",time,"\n")
+  }
+  declare_winner(mat)
+  mat
+}
+
+n <- 20
+p <- 0.1
+
+vote_plot <- function(igraph,mainstr)
+{
+  nb_node <- vcount(igraph)
+  for(i in 1: nb_node)
+  {
+    node_status <- get.vertex.attribute(igraph,"vote", i)
+    if( node_status == 1 )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(1,0,0) )
+    }
+    else if (node_status == 0 )
+    {
+      igraph <- set.vertex.attribute(igraph, 'color', i, rgb(0.9,0.9,0.7) )
+    }
+    else{
+      print("BUG PLOT attribute")
+    }
+  }
+  plot(igraph, main = mainstr )
+}
+
+igraph <- sample_gnp(n, p, directed = FALSE, loops = FALSE)
+
+
+noise <- 0.1
+time <- 3
+
+simulation(igraph,noise,time)
+```
+Now on top of this model we can add some real data.
+First, we will load some date about age repartition of the US population.
 Here is the source of data : https://www.census.gov/data/tables/time-series/demo/popest/2010s-national-detail.html#par_textimage_1537638156
 This how you can load .cvs files.
-```r
 
+```r
+path <- file.path("yourpathtofile.csv")
+
+pop_data <- read.table(path,
+            header = TRUE,
+            sep = "\t",
+            na.strings = "n/a",
+            stringsAsFactors = FALSE)
+
+
+nb_node <- 1000
+p <- 0.01
+igraph <- sample_gnp(nb_node, p, directed = FALSE, loops = FALSE)
+
+vect_age <- pop_data[,5]
+vect_pop_age <- pop_data[,6]
+
+poptot <- sum(vect_pop_age)
+popbynode <- poptot/nb_node
+vect_node_pop_age <- floor(vect_pop_age/popbynode)
+
+age_it <- 1
+node_it <- 1
+while(sum(vect_node_pop_age) > 0)
+{
+  while(vect_node_pop_age[age_it] > 0)
+  {
+    igraph <- set.vertex.attribute(igraph,"age",node_it, value = age_it)
+    vect_node_pop_age[age_it] <- vect_node_pop_age[age_it] - 1
+    node_it <- node_it + 1
+  }
+  age_it <- age_it + 1
+}
 ```
+
+Notice that modeling a population of 300 million inhabitants by only 1000 nodes creates uncertainties on our model.
+
+This is the kind of problem that must be considered during development on large and complex systems.
+
+You can now include data into your simulation and try to predict the future of political opinion, spread of epidemic or population growth.
+
+Conclusion:
+Graph network simulation is great way to modelized complex phenomena. Creating a network and perform simulation on it is simple and fun. Moreover, working with nodes attributes make the developpement flexible and allow you to improve the model incrementally and to infinity. The only limits you will met is the time you have to create the model, the computing power you have ( It is therefore necessary to optimize the algorithms or the code) and the quality of the data you will use as inputs.

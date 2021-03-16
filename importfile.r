@@ -11,8 +11,6 @@ nb_node <- 1000
 p <- 0.01
 igraph <- sample_gnp(nb_node, p, directed = FALSE, loops = FALSE)
 
-
-
 vect_age <- election_data[,5]
 vect_pop_age <- election_data[,6]
 
@@ -20,20 +18,18 @@ poptot <- sum(vect_pop_age)
 popbynode <- poptot/nb_node
 vect_node_pop_age <- floor(vect_pop_age/popbynode)
 
-print(vect_node_pop_age)
-
-iterator <- 0
+age_it <- 1
+node_it <- 1
 while(sum(vect_node_pop_age) > 0)
 {
-  tirage <- floor(runif(1,min = 1,max=nb_node) )
-  if( vect_node_pop_age[tirage] > 1 )
+  while(vect_node_pop_age[age_it] > 0)
   {
-    vect_node_pop_age[tirage] <- vect_node_pop_age[tirage] - 1
-    igraph <- set.vertex.attribute(igraph,"age",iterator, value = tirage)
-    iterator <- iterator + 1
-  }else{
-    print("bad luck")
+    igraph <- set.vertex.attribute(igraph,"age",node_it, value = age_it)
+    vect_node_pop_age[age_it] <- vect_node_pop_age[age_it] - 1
+    node_it <- node_it + 1
   }
-  print(sum(vect_node_pop_age))
+  age_it <- age_it + 1
 }
+
+
 

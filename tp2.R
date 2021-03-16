@@ -210,7 +210,8 @@ p_clustering_coef <- function(nb_nodes,nb_sample)
   )
 }
 
-p_clustering_coef(1000,20)
+#p_clustering_coef(1000,20)
+p_average_length(1000,20)
 
 average_length <- function(igraph)
 {
